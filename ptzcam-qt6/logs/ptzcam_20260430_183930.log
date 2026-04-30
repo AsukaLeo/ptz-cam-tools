@@ -1,0 +1,86 @@
+2026-04-30 18:39:30 [INFO] ptzcam: Logging to file: C:\Users\asuka\WorkBuddy\20260429153616\ptzcam-qt6\logs\ptzcam_20260430_183930.log
+2026-04-30 18:39:30 [INFO] ptzcam: Logging level: DEBUG
+2026-04-30 18:39:30 [INFO] ptzcam.main: ==================================================
+2026-04-30 18:39:30 [INFO] ptzcam.main: PTZ-Cam-Tools Starting...
+2026-04-30 18:39:30 [INFO] ptzcam.main: Debug mode: True
+2026-04-30 18:39:30 [INFO] ptzcam.main: ==================================================
+2026-04-30 18:39:30 [DEBUG] ptzcam.main: DPI policy configured
+2026-04-30 18:39:30 [DEBUG] ptzcam.main: QApplication created
+2026-04-30 18:39:30 [DEBUG] ptzcam.main: Stylesheet applied
+2026-04-30 18:39:30 [DEBUG] ptzcam.app.main_window: Window size: 960x850
+2026-04-30 18:39:30 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices...
+2026-04-30 18:39:30 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:30 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:30 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected
+2026-04-30 18:39:30 [DEBUG] ptzcam.app.main_window: Created 5 tabs
+2026-04-30 18:39:30 [DEBUG] ptzcam.app.main_window: Created 4 preview widgets
+2026-04-30 18:39:30 [DEBUG] ptzcam.app.main_window: Main window UI setup complete
+2026-04-30 18:39:31 [INFO] ptzcam.main: Main window displayed
+2026-04-30 18:39:31 [INFO] ptzcam.main: Entering event loop...
+2026-04-30 18:39:36 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices...
+2026-04-30 18:39:36 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 18:39:36 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:36 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:36 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:36 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:36 [DEBUG] ptzcam.app.main_window: Status updated: 未检测到 USB 摄像头
+2026-04-30 18:39:36 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected
+2026-04-30 18:39:40 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices...
+2026-04-30 18:39:40 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 18:39:40 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:40 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:40 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:40 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:40 [DEBUG] ptzcam.app.main_window: Status updated: 未检测到 USB 摄像头
+2026-04-30 18:39:40 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected
+2026-04-30 18:39:42 [DEBUG] ptzcam.app.main_window: Tab changed to: RTSP
+2026-04-30 18:39:42 [DEBUG] ptzcam.app.main_window: Status updated: 未连接
+2026-04-30 18:39:43 [DEBUG] ptzcam.app.main_window: Status updated: 已断开
+2026-04-30 18:39:43 [DEBUG] ptzcam.app.main_window: Status updated: 已断开
+2026-04-30 18:39:43 [DEBUG] ptzcam.app.main_window: Status updated: 已断开
+2026-04-30 18:39:44 [DEBUG] ptzcam.app.main_window: Status updated: 连接中...
+2026-04-30 18:39:44 [DEBUG] ptzcam.app.main_window: Status updated: 连接中...
+2026-04-30 18:39:44 [DEBUG] ptzcam.app.main_window: Status updated: 连接中...
+2026-04-30 18:39:44 [DEBUG] ptzcam.app.main_window: Status updated: 连接中...
+2026-04-30 18:39:45 [DEBUG] ptzcam.app.main_window: Tab changed to: USB
+2026-04-30 18:39:45 [DEBUG] ptzcam.app.main_window: Status updated: 就绪
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices...
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 18:39:47 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 未检测到 USB 摄像头
+2026-04-30 18:39:47 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices...
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 18:39:47 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 未检测到 USB 摄像头
+2026-04-30 18:39:47 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices...
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 18:39:47 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 未检测到 USB 摄像头
+2026-04-30 18:39:47 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices...
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 18:39:47 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:47 [DEBUG] ptzcam.app.main_window: Status updated: 未检测到 USB 摄像头
+2026-04-30 18:39:47 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected
+2026-04-30 18:39:48 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices...
+2026-04-30 18:39:48 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 18:39:48 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:48 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:48 [ERROR] ptzcam.app.tabs.usb_tab: Device error: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:48 [DEBUG] ptzcam.app.main_window: Status updated: 设备错误: Failed to convert device: type object 'Position' has no attribute 'Unspecified'
+2026-04-30 18:39:48 [DEBUG] ptzcam.app.main_window: Status updated: 未检测到 USB 摄像头
+2026-04-30 18:39:48 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected

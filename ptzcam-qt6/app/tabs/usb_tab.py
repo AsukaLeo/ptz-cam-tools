@@ -1,26 +1,34 @@
-"""USB camera tab page."""
+"""USB camera tab page with DirectShow capture."""
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QComboBox, QFrame
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage
 from typing import Optional, Callable
 
 from app.styles.theme import get_control_card_style, get_primary_button_style, get_standard_button_style
-from app.utils.device_manager import DeviceManager, CameraDevice
+from app.utils.device_manager import DeviceManager
+from app.utils.dshow_capture import DirectShowCapture, DShowDevice, DShowFormat
 from app.utils.logger import get_logger
 
 
+# Import QLabel for frame display
+from PySide6.QtWidgets import QLabel
+
+
 class USBTab(QWidget):
-    """USB camera configuration tab.
+    """USB camera configuration tab with DirectShow support.
     
-    Provides device selection, resolution, format, and frame rate controls.
+    Provides device selection, resolution/format/fps controls,
+    and real-time video preview with H264 support.
     
     Attributes:
         on_status_update: Callback for status updates.
         preview_widget: Video preview widget (set externally).
         device_manager: Device manager for camera enumeration.
+        capture: DirectShow capture instance.
     """
     
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -34,13 +42,20 @@ class USBTab(QWidget):
         self.preview_widget: Optional[QWidget] = None
         self._logger = get_logger(__name__)
         
-        # Initialize device manager
+        # Initialize device manager (for Qt enumeration)
         self._device_manager = DeviceManager(self)
         self._device_manager.device_added.connect(self._on_device_added)
         self._device_manager.device_removed.connect(self._on_device_removed)
         self._device_manager.error_occurred.connect(self._on_device_error)
         
-        self._current_device: Optional[CameraDevice] = None
+        # Initialize DirectShow capture
+        self._dshow_capture = DirectShowCapture(self)
+        self._dshow_capture.frame_ready.connect(self._on_frame_ready)
+        self._dshow_capture.error_occurred.connect(self._on_capture_error)
+        self._dshow_capture.state_changed.connect(self._on_capture_state_changed)
+        
+        self._current_device: Optional[DShowDevice] = None
+        self._dshow_devices: list[DShowDevice] = []
         
         self._setup_ui()
         self._enumerate_devices()
@@ -160,8 +175,8 @@ class USBTab(QWidget):
         self.preview_widget = widget
     
     def _enumerate_devices(self) -> None:
-        """Enumerate USB camera devices and update UI."""
-        self._logger.debug("Enumerating USB devices...")
+        """Enumerate USB camera devices using DirectShow and update UI."""
+        self._logger.debug("Enumerating USB devices via DirectShow...")
         self._notify_status("正在检测设备...")
         
         # Clear current list
@@ -171,22 +186,24 @@ class USBTab(QWidget):
         self.fps_combo.clear()
         self.play_btn.setEnabled(False)
         
-        # Enumerate devices
-        devices = self._device_manager.enumerate_devices()
+        # Enumerate devices using DirectShow (for H264 support)
+        self._dshow_devices = DirectShowCapture.enumerate_devices()
         
-        if not devices:
-            self.device_combo.addItem("未检测到设备", "")
+        if not self._dshow_devices:
+            self.device_combo.addItem("未检测到设备", -1)
             self._notify_status("未检测到 USB 摄像头")
             self._logger.warning("No USB camera devices detected")
             return
         
         # Populate device combo
-        for device in devices:
+        for i, device in enumerate(self._dshow_devices):
             display_text = f"{device.name}"
-            if device.is_default:
-                display_text += " (默认)"
-            self.device_combo.addItem(display_text, device.id)
-            self._logger.debug(f"Found device: {device.name} ({device.id})")
+            # Show H264 support indicator
+            h264_count = len(device.get_h264_formats())
+            if h264_count > 0:
+                display_text += f" [H264×{h264_count}]"
+            self.device_combo.addItem(display_text, i)
+            self._logger.debug(f"Found device: {device.name} ({len(device.formats)} formats)")
         
         # Connect device selection
         self.device_combo.currentIndexChanged.connect(self._on_device_selected)
@@ -195,8 +212,8 @@ class USBTab(QWidget):
         self.device_combo.setCurrentIndex(0)
         self._on_device_selected(0)
         
-        self._notify_status(f"检测到 {len(devices)} 个设备")
-        self._logger.info(f"Detected {len(devices)} USB camera(s)")
+        self._notify_status(f"检测到 {len(self._dshow_devices)} 个设备")
+        self._logger.info(f"Detected {len(self._dshow_devices)} USB camera(s)")
     
     def _on_device_selected(self, index: int) -> None:
         """Handle device selection change.
@@ -204,45 +221,42 @@ class USBTab(QWidget):
         Args:
             index: Selected device index.
         """
-        device_id = self.device_combo.currentData()
-        if not device_id:
+        if index < 0 or index >= len(self._dshow_devices):
             self.play_btn.setEnabled(False)
             return
         
-        device = self._device_manager.get_device(device_id)
-        if not device:
-            return
-        
+        device = self._dshow_devices[index]
         self._current_device = device
         self._logger.debug(f"Selected device: {device.name}")
         
         # Update format combos
-        self._update_format_combos(device)
+        self._update_format_combos_dshow(device)
         
         # Enable play button
         self.play_btn.setEnabled(True)
     
-    def _update_format_combos(self, device: CameraDevice) -> None:
-        """Update resolution/format/fps combos for selected device.
-        
-        Groups formats by resolution for proper selection.
+    def _update_format_combos_dshow(self, device: DShowDevice) -> None:
+        """Update resolution/format/fps combos for DShow device.
         
         Args:
-            device: Selected camera device.
+            device: Selected DirectShow device.
         """
         self.res_combo.clear()
         self.fmt_combo.clear()
         self.fps_combo.clear()
         
+        if not device.formats:
+            return
+        
         # Group formats by resolution
         from collections import defaultdict
         self._formats_by_resolution: dict = defaultdict(list)
         
-        for fmt in device.video_formats:
-            res_key = (fmt.resolution[0], fmt.resolution[1])
+        for fmt in device.formats:
+            res_key = (fmt.width, fmt.height)
             self._formats_by_resolution[res_key].append(fmt)
         
-        # Sort resolutions by area (descending) - highest first
+        # Sort resolutions by area (descending)
         sorted_res = sorted(
             self._formats_by_resolution.keys(),
             key=lambda x: x[0] * x[1],
@@ -254,20 +268,18 @@ class USBTab(QWidget):
             res_str = f"{res[0]} x {res[1]}"
             self.res_combo.addItem(res_str, res)
         
-        # Enable resolution combo
+        # Enable and update
         self.res_combo.setEnabled(bool(sorted_res))
-        
-        # Update format and fps for first resolution
         if sorted_res:
-            self._update_format_and_fps_for_resolution(sorted_res[0])
+            self._update_format_and_fps_for_resolution_dshow(sorted_res[0])
         
         self._logger.debug(
             f"Device {device.name}: {len(sorted_res)} resolutions, "
-            f"{len(device.video_formats)} total formats"
+            f"H264: {len(device.get_h264_formats())}"
         )
     
-    def _update_format_and_fps_for_resolution(self, resolution: tuple) -> None:
-        """Update format and fps combos for selected resolution.
+    def _update_format_and_fps_for_resolution_dshow(self, resolution: tuple) -> None:
+        """Update format and fps combos for selected resolution (DShow).
         
         Args:
             resolution: Selected resolution tuple (width, height).
@@ -279,18 +291,18 @@ class USBTab(QWidget):
         if not formats:
             return
         
-        # Group by pixel format
+        # Group by format type
         format_fps_map = {}
         for fmt in formats:
-            if fmt.pixel_format not in format_fps_map:
-                format_fps_map[fmt.pixel_format] = set()
-            format_fps_map[fmt.pixel_format].add(int(fmt.max_fps))
+            if fmt.format_type not in format_fps_map:
+                format_fps_map[fmt.format_type] = set()
+            format_fps_map[fmt.format_type].add(int(fmt.fps))
         
-        # Add formats (prioritize MJPEG > YUYV > NV12 > others)
-        format_priority = {"MJPEG": 0, "YUYV": 1, "YUY2": 1, "NV12": 2, "I420": 3}
+        # Add formats (prioritize H264 > MJPG > YUYV > others)
+        format_priority = {"H264": 0, "MJPG": 1, "MJPEG": 1, "YUYV": 2, "YUY2": 2, "NV12": 3}
         sorted_formats = sorted(
             format_fps_map.keys(),
-            key=lambda x: format_priority.get(x, 99)
+            key=lambda x: format_priority.get(x.upper(), 99)
         )
         
         for fmt in sorted_formats:
@@ -318,7 +330,7 @@ class USBTab(QWidget):
         
         resolution = self.res_combo.currentData()
         if resolution:
-            self._update_format_and_fps_for_resolution(resolution)
+            self._update_format_and_fps_for_resolution_dshow(resolution)
             self._logger.debug(f"Resolution changed to: {resolution[0]}x{resolution[1]}")
     
     def _toggle_playback(self) -> None:
@@ -329,40 +341,122 @@ class USBTab(QWidget):
             self._stop_playback()
     
     def _start_playback(self) -> None:
-        """Start video playback."""
-        device_id = self.device_combo.currentData()
-        if not device_id:
+        """Start video playback using DirectShow."""
+        if not self._current_device:
             return
         
-        self._logger.info(f"Starting playback for device: {device_id}")
+        device = self._current_device
+        self._logger.info(f"Starting playback for device: {device.name}")
         self._notify_status("正在启动视频...")
         
-        # TODO: Start video capture (Phase 2)
-        # For now, just update UI
-        self.play_btn.setText("停止")
-        self.device_combo.setEnabled(False)
-        self.refresh_btn.setEnabled(False)
-        self._notify_status("视频播放中")
+        # Get selected format
+        res = self.res_combo.currentData()
+        fmt_name = self.fmt_combo.currentText()
+        
+        # Find matching format
+        selected_format = None
+        for f in device.formats:
+            if (f.width, f.height) == res and f.format_type == fmt_name:
+                selected_format = f
+                break
+        
+        # Use best format if not found
+        if not selected_format:
+            selected_format = device.get_best_preview_format()
+        
+        if not selected_format:
+            self._notify_status("错误：无法找到合适的视频格式")
+            return
+        
+        self._logger.debug(f"Using format: {selected_format}")
+        
+        # Hide placeholder
+        if hasattr(self.preview_widget, 'hide_placeholder'):
+            self.preview_widget.hide_placeholder()
+        
+        # Start capture
+        success = self._dshow_capture.start_capture(device, selected_format)
+        
+        if success:
+            self.play_btn.setText("停止")
+            self.device_combo.setEnabled(False)
+            self.refresh_btn.setEnabled(False)
+            self.res_combo.setEnabled(False)
+            self.fmt_combo.setEnabled(False)
+            self.fps_combo.setEnabled(False)
+            self._notify_status("视频播放中")
+        else:
+            self._notify_status("启动视频失败")
     
     def _stop_playback(self) -> None:
         """Stop video playback."""
         self._logger.info("Stopping playback")
         self._notify_status("视频已停止")
         
-        # TODO: Stop video capture (Phase 2)
-        # For now, just update UI
+        # Stop capture
+        self._dshow_capture.stop_capture()
+        
+        # Show placeholder
+        if hasattr(self.preview_widget, 'show_placeholder'):
+            self.preview_widget.show_placeholder()
+        
+        # Update UI
         self.play_btn.setText("播放")
         self.device_combo.setEnabled(True)
         self.refresh_btn.setEnabled(True)
+        self.res_combo.setEnabled(True)
+        self.fmt_combo.setEnabled(True)
+        self.fps_combo.setEnabled(True)
     
-    def _on_device_added(self, device: CameraDevice) -> None:
-        """Handle device added event.
+    def _on_frame_ready(self, image: QImage) -> None:
+        """Handle new video frame.
+        
+        Args:
+            image: Video frame as QImage.
+        """
+        if self.preview_widget and hasattr(self.preview_widget, 'video_frame'):
+            # Update video frame pixmap
+            from PySide6.QtGui import QPixmap
+            pixmap = QPixmap.fromImage(image)
+            # Scale to fit while maintaining aspect ratio
+            label = self.preview_widget.video_frame.findChild(QLabel)
+            if label:
+                scaled = pixmap.scaled(
+                    label.size(),
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+                label.setPixmap(scaled)
+    
+    def _on_capture_error(self, error: str) -> None:
+        """Handle capture error.
+        
+        Args:
+            error: Error message.
+        """
+        self._logger.error(f"Capture error: {error}")
+        self._notify_status(f"视频错误: {error}")
+        self._stop_playback()
+    
+    def _on_capture_state_changed(self, state: str) -> None:
+        """Handle capture state change.
+        
+        Args:
+            state: New state ('playing', 'stopped').
+        """
+        self._logger.debug(f"Capture state: {state}")
+        if state == 'stopped':
+            self._stop_playback()
+    
+    def _on_device_added(self, device) -> None:
+        """Handle device added event (from Qt device manager).
         
         Args:
             device: Newly connected device.
         """
-        self._logger.info(f"Device connected: {device.name}")
+        self._logger.info(f"Qt device connected: {device.name}")
         self._notify_status(f"设备已连接: {device.name}")
+        # Re-enumerate with DirectShow
         self._enumerate_devices()
     
     def _on_device_removed(self, device_id: str) -> None:
