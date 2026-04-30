@@ -186,30 +186,30 @@ class USBTab(QWidget):
         self.fps_combo.clear()
         self.play_btn.setEnabled(False)
         
-        # Get Qt devices (correct names for physical cameras)
+        # Get Qt devices (physical cameras with correct names)
         qt_devices = self._device_manager.enumerate_devices()
         self._logger.debug(f"Qt enumeration found {len(qt_devices)} device(s):")
         for i, d in enumerate(qt_devices):
             self._logger.debug(f"  Qt[{i}]: {d.name}")
         
-        # Get DirectShow devices (includes virtual cameras)
+        # Get DirectShow devices (for capture)
         self._logger.debug("Calling DirectShowCapture.enumerate_devices()...")
-        self._dshow_devices = DirectShowCapture.enumerate_devices()
-        self._logger.debug(f"DirectShow returned {len(self._dshow_devices)} device(s):")
-        for i, d in enumerate(self._dshow_devices):
+        dshow_devices = DirectShowCapture.enumerate_devices()
+        self._logger.debug(f"DirectShow returned {len(dshow_devices)} device(s):")
+        for i, d in enumerate(dshow_devices):
             self._logger.debug(f"  DShow[{i}]: {d.name}")
         
-        # Map Qt names to DShow devices by index matching
-        # Qt devices are usually physical cameras at the beginning
-        for i, dshow_dev in enumerate(self._dshow_devices):
-            if i < len(qt_devices):
-                # Use Qt name for this device
-                old_name = dshow_dev.name
-                dshow_dev.name = qt_devices[i].name
-                self._logger.debug(f"Named DShow[{i}]: '{old_name}' -> '{dshow_dev.name}'")
+        # Only show physical cameras (Qt devices) - skip virtual cameras
+        self._dshow_devices = []
+        for i, qt_dev in enumerate(qt_devices):
+            if i < len(dshow_devices):
+                # Use this DShow device with Qt name
+                dshow_dev = dshow_devices[i]
+                dshow_dev.name = qt_dev.name
+                self._dshow_devices.append(dshow_dev)
+                self._logger.debug(f"Added physical camera: {dshow_dev.name}")
             else:
-                # Virtual camera or additional device - keep DShow default name
-                self._logger.debug(f"Named DShow[{i}]: '{dshow_dev.name}' (no Qt match)")
+                self._logger.warning(f"No DShow device for Qt[{i}] {qt_dev.name}")
         
         if not self._dshow_devices:
             self.device_combo.addItem("未检测到设备", -1)
