@@ -199,22 +199,14 @@ class DeviceManager(QObject):
             Converted CameraDevice.
         """
         try:
-            # Get photo resolutions
-            photo_resolutions = [
-                (res.width(), res.height())
-                for res in qdevice.photoResolutions()
-            ]
+            # Fix: device ID may be bytes, convert to string
+            device_id = qdevice.id()
+            if isinstance(device_id, bytes):
+                device_id = device_id.decode('utf-8', errors='ignore')
             
-            # Get video formats
-            video_formats = []
-            for fmt in qdevice.videoFormats():
-                format_info = CameraFormat(
-                    resolution=(fmt.resolution().width(), fmt.resolution().height()),
-                    pixel_format=self._convert_pixel_format(fmt.pixelFormat()),
-                    min_fps=fmt.minFrameRate(),
-                    max_fps=fmt.maxFrameRate()
-                )
-                video_formats.append(format_info)
+            # Get basic info (always available)
+            device_name = qdevice.description()
+            is_default = qdevice.isDefault()
             
             # Determine position
             position_map = {
@@ -222,13 +214,40 @@ class DeviceManager(QObject):
                 QCameraDevice.Position.BackFace: "Back",
                 QCameraDevice.Position.Unspecified: "Unspecified"
             }
-            position = position_map.get(qdevice.position(), "Unknown")
+            position = position_map.get(qdevice.position(), "Unspecified")
+            
+            # Get photo resolutions (may be empty)
+            photo_resolutions = []
+            try:
+                photo_resolutions = [
+                    (res.width(), res.height())
+                    for res in qdevice.photoResolutions()
+                ]
+            except Exception:
+                pass  # Ignore if not available
+            
+            # Get video formats (may be empty or fail)
+            video_formats = []
+            try:
+                for fmt in qdevice.videoFormats():
+                    try:
+                        format_info = CameraFormat(
+                            resolution=(fmt.resolution().width(), fmt.resolution().height()),
+                            pixel_format=self._convert_pixel_format(fmt.pixelFormat()),
+                            min_fps=fmt.minFrameRate(),
+                            max_fps=fmt.maxFrameRate()
+                        )
+                        video_formats.append(format_info)
+                    except Exception:
+                        continue  # Skip problematic formats
+            except Exception:
+                pass  # Ignore if not available
             
             return CameraDevice(
-                id=qdevice.id(),
-                name=qdevice.description(),
-                description=qdevice.description(),
-                is_default=qdevice.isDefault(),
+                id=device_id,
+                name=device_name,
+                description=device_name,
+                is_default=is_default,
                 position=position,
                 photo_resolutions=photo_resolutions,
                 video_formats=video_formats
@@ -238,26 +257,29 @@ class DeviceManager(QObject):
             self.error_occurred.emit(f"Failed to convert device: {e}")
             return None
     
-    def _convert_pixel_format(self, fmt: QCameraFormat.PixelFormat) -> str:
+    def _convert_pixel_format(self, fmt) -> str:
         """Convert Qt pixel format to string.
         
         Args:
-            fmt: Qt pixel format enum.
+            fmt: Qt pixel format enum or int.
             
         Returns:
             Format name string.
         """
-        format_map = {
-            QCameraFormat.PixelFormat.YUYV: "YUYV",
-            QCameraFormat.PixelFormat.JPEG: "MJPEG",
-            QCameraFormat.PixelFormat.H264: "H264",
-            QCameraFormat.PixelFormat.NV12: "NV12",
-            QCameraFormat.PixelFormat.I420: "I420",
-            QCameraFormat.PixelFormat.Format_RGB24: "RGB24",
-            QCameraFormat.PixelFormat.Format_BGR24: "BGR24",
-            QCameraFormat.PixelFormat.UYVY: "UYVY",
-        }
-        return format_map.get(fmt, f"Unknown({fmt})")
+        try:
+            format_map = {
+                QCameraFormat.PixelFormat.YUYV: "YUYV",
+                QCameraFormat.PixelFormat.JPEG: "MJPEG",
+                QCameraFormat.PixelFormat.H264: "H264",
+                QCameraFormat.PixelFormat.NV12: "NV12",
+                QCameraFormat.PixelFormat.I420: "I420",
+                QCameraFormat.PixelFormat.Format_RGB24: "RGB24",
+                QCameraFormat.PixelFormat.Format_BGR24: "BGR24",
+                QCameraFormat.PixelFormat.UYVY: "UYVY",
+            }
+            return format_map.get(fmt, f"Unknown({int(fmt)})")
+        except Exception:
+            return "Unknown"
     
     def _on_devices_changed(self) -> None:
         """Handle device list changes from Qt."""
