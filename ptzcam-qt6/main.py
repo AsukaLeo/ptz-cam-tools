@@ -34,29 +34,9 @@ class MainWindow(QMainWindow):
 
         self.setup_ui()
 
-    # ── 窗口比例约束 ────────────────────────────────────────────
+    # ── 窗口调整 ────────────────────────────────────────────
     def resizeEvent(self, event: QResizeEvent):
         super().resizeEvent(event)
-        if self._resizing:
-            return
-
-        w = self.width()
-        h = self.height()
-
-        target_h = int(w * ASPECT_H / ASPECT_W)
-        target_w = int(h * ASPECT_W / ASPECT_H)
-
-        if abs(w * ASPECT_H - h * ASPECT_W) < abs(h * ASPECT_W - w * ASPECT_H):
-            if h != target_h:
-                self._resizing = True
-                self.resize(w, target_h)
-                self._resizing = False
-        else:
-            if w != target_w:
-                self._resizing = True
-                self.resize(target_w, h)
-                self._resizing = False
-
         # 延迟更新预览区尺寸（等布局完成后再算）
         from PySide6.QtCore import QTimer
         QTimer.singleShot(0, self._update_preview_size)
@@ -71,23 +51,38 @@ class MainWindow(QMainWindow):
         self._update_preview_size()
 
     def _update_preview_size(self):
-        """限制预览区最大高度为 16:9 比例，让布局自动分配剩余空间"""
-        for frame in self._preview_frames:
-            if not frame.isVisible():
+        """设置预览区内部视频层保持 16:9 比例，居中显示"""
+        for container in self._preview_frames:
+            if not container.isVisible():
                 continue
 
-            parent = frame.parentWidget()
+            parent = container.parentWidget()
             if not parent:
                 continue
 
-            # 预览区宽度 = tab 页面宽度 - 32（左右 padding）
-            content_w = parent.width() - 32
-            # 最大高度按 16:9 比例限制
-            max_h = int(content_w * 9 / 16)
-            max_h = max(max_h, 120)
+            # 获取外层容器可用空间（宽度 = tab 页宽 - padding，高度 = 容器高度）
+            container_w = parent.width() - 32
+            container_h = container.height()
 
-            frame.setMaximumHeight(max_h)
-            frame.setMinimumHeight(120)
+            # 计算 16:9 视频层的尺寸，适配容器
+            ideal_h = int(container_w * 9 / 16)
+
+            if ideal_h <= container_h:
+                # 按宽度算的高度能放下，宽度撑满，高度 16:9
+                video_w = container_w
+                video_h = ideal_h
+            else:
+                # 高度超了，按高度算宽度
+                video_h = container_h
+                video_w = int(video_h * 16 / 9)
+
+            video_w = max(video_w, 160)
+            video_h = max(video_h, 90)
+
+            # 找到内层视频层并设置尺寸
+            video_frame = container.findChild(QFrame, "videoFrame")
+            if video_frame:
+                video_frame.setFixedSize(video_w, video_h)
 
     # ── UI 构建 ────────────────────────────────────────────────
     def setup_ui(self):
@@ -107,12 +102,18 @@ class MainWindow(QMainWindow):
         # Status bar
         self.status_label = QLabel("状态: 就绪")
         self.statusBar().addWidget(self.status_label)
+
+        # 版本署名放到右下角
+        self.version_label = QLabel("Ver1.0 By Asuka")
+        self.version_label.setStyleSheet("color: #999; font-size: 11px; background: transparent;")
+        self.statusBar().addPermanentWidget(self.version_label)
+
         self.statusBar().addPermanentWidget(QSizeGrip(self))
 
     def create_tab_widget(self, parent_layout):
         self.tab_widget = QTabWidget()
 
-        self.tab_widget.addTab(self.create_usb_tab(), "USB预览")
+        self.tab_widget.addTab(self.create_usb_tab(), "USB")
         self.tab_widget.addTab(self.create_rtsp_tab(), "RTSP")
         self.tab_widget.addTab(self.create_ndi_tab(), "NDI")
         self.tab_widget.addTab(self.create_onvif_tab(), "ONVIF")
@@ -122,29 +123,43 @@ class MainWindow(QMainWindow):
         parent_layout.addWidget(self.tab_widget, 1)  # stretch=1 让 tab 区域占满剩余空间
 
     def _create_preview(self):
-        """创建视频预览区 — 宽度撑满，高度按 16:9 比例计算"""
-        preview = QFrame()
-        preview.setObjectName("preview")
-        preview.setStyleSheet("""
-            QFrame#preview {
+        """创建视频预览区 — 黑色背景填充，内部视频层保持 16:9"""
+        # 外层容器：黑色背景，填充可用空间
+        container = QFrame()
+        container.setObjectName("previewContainer")
+        container.setStyleSheet("""
+            QFrame#previewContainer {
                 background-color: #1a1a1a;
                 border: 2px solid #333;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                border-bottom-left-radius: 6px;
-                border-bottom-right-radius: 6px;
+                border-radius: 6px;
             }
         """)
-        preview_layout = QVBoxLayout(preview)
-        preview_layout.setContentsMargins(0, 0, 0, 0)
-        preview_layout.setAlignment(Qt.AlignCenter)
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setAlignment(Qt.AlignCenter)
+
+        # 内层视频层：保持 16:9 比例
+        video_frame = QFrame()
+        video_frame.setObjectName("videoFrame")
+        video_frame.setStyleSheet("""
+            QFrame#videoFrame {
+                background-color: #0a0a0a;
+                border-radius: 4px;
+            }
+        """)
+        video_layout = QVBoxLayout(video_frame)
+        video_layout.setContentsMargins(0, 0, 0, 0)
+        video_layout.setAlignment(Qt.AlignCenter)
+
         lbl = QLabel("视频预览区")
         lbl.setStyleSheet("color: #666; font-size: 24px; background: transparent;")
         lbl.setAlignment(Qt.AlignCenter)
-        preview_layout.addWidget(lbl)
+        video_layout.addWidget(lbl)
 
-        self._preview_frames.append(preview)
-        return preview
+        container_layout.addWidget(video_frame)
+
+        self._preview_frames.append(container)
+        return container
 
     # ── 按钮工厂 ───────────────────────────────────────────────
     def _make_primary_btn(self, text, callback):
@@ -237,7 +252,7 @@ class MainWindow(QMainWindow):
 
         # 第二行：分辨率 / 格式 / 帧率
         param_row = QHBoxLayout()
-        param_row.setSpacing(16)
+        param_row.setSpacing(8)
 
         lbl1 = QLabel("分辨率:")
         lbl1.setFixedWidth(80)
@@ -260,10 +275,11 @@ class MainWindow(QMainWindow):
         param_row.addStretch()
         card_layout.addLayout(param_row)
 
+        card.setFixedHeight(120)
         layout.addWidget(card)
 
-        # Preview — stretch=1 自动填充，maxHeight 由 _update_preview_size 限制
-        layout.addWidget(self._create_preview(), 1)
+        # Preview — 高度由 _update_preview_size 限制为 16:9，不 stretch
+        layout.addWidget(self._create_preview())
 
         return page
 
@@ -324,6 +340,7 @@ class MainWindow(QMainWindow):
         net_row.addStretch()
         card1_layout.addLayout(net_row)
 
+        card1.setFixedHeight(120)
         layout.addWidget(card1)
 
         # Preview — stretch=1 自动填充
@@ -550,12 +567,12 @@ class MainWindow(QMainWindow):
         zr = QHBoxLayout()
         zr.setSpacing(8)
         zr.addWidget(ctrl_btn("Zoom+", lambda: self.update_status("Zoom +")))
-        zr.addWidget(ctrl_btn("Zoom-", lambda: self.update_status("Zoom -")))
+        zr.addWidget(ctrl_btn("Focus+", lambda: self.update_status("Focus +")))
         zf_layout.addLayout(zr)
 
         fr = QHBoxLayout()
         fr.setSpacing(8)
-        fr.addWidget(ctrl_btn("Focus+", lambda: self.update_status("Focus +")))
+        fr.addWidget(ctrl_btn("Zoom-", lambda: self.update_status("Zoom -")))
         fr.addWidget(ctrl_btn("Focus-", lambda: self.update_status("Focus -")))
         zf_layout.addLayout(fr)
 
