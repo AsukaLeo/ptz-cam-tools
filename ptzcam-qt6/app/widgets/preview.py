@@ -57,7 +57,26 @@ class PreviewWidget(QFrame):
         self.placeholder_label.setAlignment(Qt.AlignCenter)
         self._video_layout.addWidget(self.placeholder_label)
         
+        # Video display label (for showing frames)
+        self.video_label = QLabel()
+        self.video_label.setStyleSheet("background: transparent;")
+        self.video_label.setAlignment(Qt.AlignCenter)
+        self.video_label.setScaledContents(True)
+        self.video_label.hide()  # Hidden by default
+        self._video_layout.addWidget(self.video_label)
+        
         self._layout.addWidget(self.video_frame)
+    
+    def set_video_frame(self, pixmap) -> None:
+        """Display video frame.
+        
+        Args:
+            pixmap: QPixmap to display.
+        """
+        if pixmap:
+            self.video_label.setPixmap(pixmap)
+            self.video_label.show()
+            self.placeholder_label.hide()
     
     def update_video_size(self, container_width: int, container_height: int) -> None:
         """Update video frame size to maintain 16:9 aspect ratio.

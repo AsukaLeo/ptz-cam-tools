@@ -426,19 +426,18 @@ class USBTab(QWidget):
         Args:
             image: Video frame as QImage.
         """
-        if self.preview_widget and hasattr(self.preview_widget, 'video_frame'):
-            # Update video frame pixmap
+        if self.preview_widget and hasattr(self.preview_widget, 'set_video_frame'):
+            # Convert to pixmap and display
             from PySide6.QtGui import QPixmap
             pixmap = QPixmap.fromImage(image)
-            # Scale to fit while maintaining aspect ratio
-            label = self.preview_widget.video_frame.findChild(QLabel)
-            if label:
-                scaled = pixmap.scaled(
-                    label.size(),
-                    Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation
-                )
-                label.setPixmap(scaled)
+            # Scale to fit the video frame
+            target_size = self.preview_widget.video_frame.size()
+            scaled = pixmap.scaled(
+                target_size,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+            self.preview_widget.set_video_frame(scaled)
     
     def _on_capture_error(self, error: str) -> None:
         """Handle capture error.
