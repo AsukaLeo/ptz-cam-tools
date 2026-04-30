@@ -186,26 +186,35 @@ class USBTab(QWidget):
         self.fps_combo.clear()
         self.play_btn.setEnabled(False)
         
-        # First get Qt device names (which have real friendly names)
+        # Get Qt devices (correct names) - USE THESE FOR DISPLAY
         qt_devices = self._device_manager.enumerate_devices()
-        qt_names = {i: d.name for i, d in enumerate(qt_devices)}
-        self._logger.debug(f"Qt enumeration found {len(qt_names)} device(s):")
-        for i, name in qt_names.items():
-            self._logger.debug(f"  Qt[{i}]: {name}")
+        self._logger.debug(f"Qt enumeration found {len(qt_devices)} device(s):")
+        for i, d in enumerate(qt_devices):
+            self._logger.debug(f"  Qt[{i}]: {d.name}")
         
-        # Enumerate devices using DirectShow
+        # Get DirectShow devices (for capture) - MAY HAVE DIFFERENT ORDER
         self._logger.debug("Calling DirectShowCapture.enumerate_devices()...")
-        self._dshow_devices = DirectShowCapture.enumerate_devices()
-        self._logger.debug(f"DirectShow returned {len(self._dshow_devices)} device(s):")
-        for i, d in enumerate(self._dshow_devices):
+        dshow_devices = DirectShowCapture.enumerate_devices()
+        self._logger.debug(f"DirectShow returned {len(dshow_devices)} device(s):")
+        for i, d in enumerate(dshow_devices):
             self._logger.debug(f"  DShow[{i}]: {d.name}")
         
-        # Map Qt names to DirectShow devices by index
-        for i, device in enumerate(self._dshow_devices):
-            if i in qt_names:
-                old_name = device.name
-                device.name = qt_names[i]
-                self._logger.debug(f"Mapped DShow[{i}]: '{old_name}' -> '{device.name}'")
+        # Build device list using Qt names (correct) with DShow index for capture
+        self._dshow_devices = []
+        for i, qt_dev in enumerate(qt_devices):
+            # Find matching DShow device by trying same index first
+            dshow_dev = None
+            if i < len(dshow_devices):
+                dshow_dev = dshow_devices[i]
+            
+            if dshow_dev:
+                # Use Qt name but DShow index for capture
+                dshow_dev.name = qt_dev.name
+                self._dshow_devices.append(dshow_dev)
+                self._logger.debug(f"Mapped: Qt[{i}] '{qt_dev.name}' -> DShow[{dshow_dev.index}]")
+            else:
+                # No matching DShow device, skip
+                self._logger.warning(f"No DShow device for Qt[{i}] '{qt_dev.name}'")
         
         if not self._dshow_devices:
             self.device_combo.addItem("未检测到设备", -1)
