@@ -132,16 +132,30 @@ class DeviceManager(QObject):
         
         try:
             qdevices = self._media_devices.videoInputs()
+            print(f"[DEBUG] enumerate_devices: found {len(qdevices)} raw device(s)")
             
-            for qdevice in qdevices:
-                device = self._convert_device(qdevice)
-                if device:
-                    devices.append(device)
-                    self._devices[device.id] = device
+            for i, qdevice in enumerate(qdevices):
+                print(f"[DEBUG] Processing device {i+1}: {qdevice.description()}")
+                try:
+                    device = self._convert_device(qdevice)
+                    if device:
+                        devices.append(device)
+                        self._devices[device.id] = device
+                        print(f"[DEBUG] Device {i+1} converted successfully")
+                    else:
+                        print(f"[DEBUG] Device {i+1} conversion returned None")
+                except Exception as e:
+                    print(f"[DEBUG] Device {i+1} conversion error: {e}")
+                    import traceback
+                    traceback.print_exc()
         
         except Exception as e:
+            print(f"[DEBUG] enumerate_devices error: {e}")
+            import traceback
+            traceback.print_exc()
             self.error_occurred.emit(f"Failed to enumerate devices: {e}")
         
+        print(f"[DEBUG] enumerate_devices returning {len(devices)} device(s)")
         return devices
     
     def get_device(self, device_id: str) -> Optional[CameraDevice]:
@@ -199,22 +213,39 @@ class DeviceManager(QObject):
             Converted CameraDevice.
         """
         try:
-            # Fix: device ID may be bytes, convert to string
-            device_id = qdevice.id()
-            if isinstance(device_id, bytes):
-                device_id = device_id.decode('utf-8', errors='ignore')
+            # Fix: device ID is QByteArray, convert to string
+            device_id_raw = qdevice.id()
+            print(f"[DEBUG] Device ID type: {type(device_id_raw)}, value: {repr(device_id_raw)[:80]}")
+            
+            try:
+                # Method 1: QByteArray to bytes then decode
+                device_bytes = bytes(device_id_raw)
+                device_id = device_bytes.decode('utf-8', errors='ignore')
+                print(f"[DEBUG] ID converted via bytes(): {device_id[:50]}...")
+            except Exception as e1:
+                print(f"[DEBUG] bytes() method failed: {e1}")
+                try:
+                    # Method 2: Direct str conversion
+                    device_id = str(device_id_raw)
+                    print(f"[DEBUG] ID converted via str(): {device_id[:50]}...")
+                except Exception as e2:
+                    print(f"[DEBUG] str() method failed: {e2}")
+                    device_id = f"device_{id(qdevice)}"  # Fallback
             
             # Get basic info (always available)
             device_name = qdevice.description()
             is_default = qdevice.isDefault()
             
-            # Determine position
-            position_map = {
-                QCameraDevice.Position.FrontFace: "Front",
-                QCameraDevice.Position.BackFace: "Back",
-                QCameraDevice.Position.Unspecified: "Unspecified"
-            }
-            position = position_map.get(qdevice.position(), "Unspecified")
+            # Determine position (handle different Qt versions)
+            try:
+                position_map = {
+                    QCameraDevice.Position.FrontFace: "Front",
+                    QCameraDevice.Position.BackFace: "Back",
+                }
+                position = position_map.get(qdevice.position(), "Unspecified")
+            except Exception as e:
+                print(f"[DEBUG] Position mapping error: {e}")
+                position = "Unspecified"
             
             # Get photo resolutions (may be empty)
             photo_resolutions = []
