@@ -292,25 +292,36 @@ class DeviceManager(QObject):
         """Convert Qt pixel format to string.
         
         Args:
-            fmt: Qt pixel format enum or int.
+            fmt: Qt pixel format enum.
             
         Returns:
             Format name string.
         """
         try:
+            # Map by enum value (more reliable across Qt versions)
             format_map = {
-                QCameraFormat.PixelFormat.YUYV: "YUYV",
-                QCameraFormat.PixelFormat.JPEG: "MJPEG",
-                QCameraFormat.PixelFormat.H264: "H264",
-                QCameraFormat.PixelFormat.NV12: "NV12",
-                QCameraFormat.PixelFormat.I420: "I420",
-                QCameraFormat.PixelFormat.Format_RGB24: "RGB24",
-                QCameraFormat.PixelFormat.Format_BGR24: "BGR24",
-                QCameraFormat.PixelFormat.UYVY: "UYVY",
+                17: "YUYV",      # Format_YUYV
+                18: "NV12",      # Format_NV12
+                19: "NV21",      # Format_NV21
+                20: "I420",      # Format_IMC2/IMC4/I420
+                21: "I420",      # Format_YUV420P
+                22: "UYVY",      # Format_UYVY
+                23: "YVYU",      # Format_YVYU
+                24: "RGB24",     # Format_RGB24
+                25: "BGR24",     # Format_BGR24
+                26: "RGB32",     # Format_RGBX8888
+                27: "BGR32",     # Format_BGRX8888
+                28: "RGBA",      # Format_RGBA8888
+                29: "MJPEG",     # Format_Jpeg
+                30: "H264",      # Format_H264 (if available)
             }
-            return format_map.get(fmt, f"Unknown({int(fmt)})")
-        except Exception:
-            return "Unknown"
+            
+            # Get the integer value
+            fmt_value = fmt.value if hasattr(fmt, 'value') else int(fmt)
+            
+            return format_map.get(fmt_value, f"Fmt({fmt_value})")
+        except Exception as e:
+            return f"Unknown"
     
     def _on_devices_changed(self) -> None:
         """Handle device list changes from Qt."""

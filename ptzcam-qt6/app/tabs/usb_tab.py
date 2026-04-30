@@ -225,6 +225,8 @@ class USBTab(QWidget):
     def _update_format_combos(self, device: CameraDevice) -> None:
         """Update resolution/format/fps combos for selected device.
         
+        Groups formats by resolution for proper selection.
+        
         Args:
             device: Selected camera device.
         """
@@ -232,36 +234,78 @@ class USBTab(QWidget):
         self.fmt_combo.clear()
         self.fps_combo.clear()
         
-        # Get unique resolutions
-        resolutions = set()
-        formats = set()
-        frame_rates = set()
+        # Group formats by resolution
+        from collections import defaultdict
+        self._formats_by_resolution: dict = defaultdict(list)
         
         for fmt in device.video_formats:
-            res_str = f"{fmt.resolution[0]} x {fmt.resolution[1]}"
-            resolutions.add((fmt.resolution[0], fmt.resolution[1], res_str))
-            formats.add(fmt.pixel_format)
-            frame_rates.add(f"{int(fmt.max_fps)} fps")
+            res_key = (fmt.resolution[0], fmt.resolution[1])
+            self._formats_by_resolution[res_key].append(fmt)
         
-        # Sort resolutions by area (descending)
-        sorted_res = sorted(resolutions, key=lambda x: x[0]*x[1], reverse=True)
-        for _, _, res_str in sorted_res:
-            self.res_combo.addItem(res_str)
+        # Sort resolutions by area (descending) - highest first
+        sorted_res = sorted(
+            self._formats_by_resolution.keys(),
+            key=lambda x: x[0] * x[1],
+            reverse=True
+        )
         
-        # Add formats
-        for fmt in sorted(formats):
+        # Populate resolution combo
+        for res in sorted_res:
+            res_str = f"{res[0]} x {res[1]}"
+            self.res_combo.addItem(res_str, res)
+        
+        # Enable resolution combo
+        self.res_combo.setEnabled(bool(sorted_res))
+        
+        # Update format and fps for first resolution
+        if sorted_res:
+            self._update_format_and_fps_for_resolution(sorted_res[0])
+        
+        self._logger.debug(
+            f"Device {device.name}: {len(sorted_res)} resolutions, "
+            f"{len(device.video_formats)} total formats"
+        )
+    
+    def _update_format_and_fps_for_resolution(self, resolution: tuple) -> None:
+        """Update format and fps combos for selected resolution.
+        
+        Args:
+            resolution: Selected resolution tuple (width, height).
+        """
+        self.fmt_combo.clear()
+        self.fps_combo.clear()
+        
+        formats = self._formats_by_resolution.get(resolution, [])
+        if not formats:
+            return
+        
+        # Group by pixel format
+        format_fps_map = {}
+        for fmt in formats:
+            if fmt.pixel_format not in format_fps_map:
+                format_fps_map[fmt.pixel_format] = set()
+            format_fps_map[fmt.pixel_format].add(int(fmt.max_fps))
+        
+        # Add formats (prioritize MJPEG > YUYV > NV12 > others)
+        format_priority = {"MJPEG": 0, "YUYV": 1, "YUY2": 1, "NV12": 2, "I420": 3}
+        sorted_formats = sorted(
+            format_fps_map.keys(),
+            key=lambda x: format_priority.get(x, 99)
+        )
+        
+        for fmt in sorted_formats:
             self.fmt_combo.addItem(fmt)
         
-        # Add frame rates
-        for fps in sorted(frame_rates, key=lambda x: int(x.split()[0]), reverse=True):
-            self.fps_combo.addItem(fps)
+        # Add frame rates for first format
+        first_format = sorted_formats[0] if sorted_formats else None
+        if first_format:
+            fps_values = sorted(format_fps_map[first_format], reverse=True)
+            for fps in fps_values:
+                self.fps_combo.addItem(f"{fps} fps")
         
         # Enable combos
-        self.res_combo.setEnabled(bool(resolutions))
-        self.fmt_combo.setEnabled(bool(formats))
-        self.fps_combo.setEnabled(bool(frame_rates))
-        
-        self._logger.debug(f"Device supports {len(resolutions)} resolutions, {len(formats)} formats")
+        self.fmt_combo.setEnabled(bool(sorted_formats))
+        self.fps_combo.setEnabled(bool(first_format))
     
     def _on_resolution_changed(self, index: int) -> None:
         """Handle resolution selection change.
@@ -269,11 +313,13 @@ class USBTab(QWidget):
         Args:
             index: Selected resolution index.
         """
-        if not self._current_device:
+        if not self._current_device or index < 0:
             return
         
-        res_text = self.res_combo.currentText()
-        self._logger.debug(f"Resolution changed to: {res_text}")
+        resolution = self.res_combo.currentData()
+        if resolution:
+            self._update_format_and_fps_for_resolution(resolution)
+            self._logger.debug(f"Resolution changed to: {resolution[0]}x{resolution[1]}")
     
     def _toggle_playback(self) -> None:
         """Toggle video playback."""
