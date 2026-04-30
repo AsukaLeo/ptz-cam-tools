@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
         self._update_preview_size()
 
     def _update_preview_size(self):
-        """动态调整所有预览帧高度，确保控制栏始终可见"""
+        """动态调整所有预览帧高度，按 16:9 比例"""
         for frame in self._preview_frames:
             if not frame.isVisible():
                 continue
@@ -80,21 +80,13 @@ class MainWindow(QMainWindow):
             if not parent:
                 continue
 
-            # parent 是 tab 页面的 QWidget
-            ph = parent.height()
-            # tab 页面内部布局：上方控件约 80px，下方控制栏约 35px，contents margins + spacing 约 40px
-            available = ph - 80 - 35 - 40
-            available = max(available, 120)
+            # 预览区宽度 = tab 页面宽度 - 32（左右 padding）
+            content_w = parent.width() - 32
+            # 高度按 16:9 比例
+            target_h = int(content_w * 9 / 16)
+            target_h = max(target_h, 120)
 
-            # 根据分辨率比例计算
-            if self._preview_resolution:
-                pw, prh = self._preview_resolution
-                if prh > 0 and pw > 0:
-                    content_w = parent.width() - 32  # 左右 padding
-                    max_h = int(content_w * prh / pw)
-                    available = min(available, max_h)
-
-            frame.setFixedHeight(max(available, 120))
+            frame.setFixedHeight(target_h)
 
     # ── UI 构建 ────────────────────────────────────────────────
     def setup_ui(self):
@@ -102,7 +94,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
         main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setContentsMargins(0, 12, 0, 0)  # 顶部留 12px 给 Tab
         main_layout.setSpacing(0)
 
         # Tab widget
@@ -129,15 +121,14 @@ class MainWindow(QMainWindow):
         parent_layout.addWidget(self.tab_widget, 1)  # stretch=1 让 tab 区域占满剩余空间
 
     def _create_preview(self):
-        """创建视频预览区 — 高度由 _update_preview_size 动态管理"""
+        """创建视频预览区 — 宽度撑满，高度按 16:9 比例计算"""
         preview = QFrame()
-        preview.setFixedHeight(240)  # 初始值，会被动态调整
         preview.setObjectName("preview")
         preview.setStyleSheet("""
             QFrame#preview {
                 background-color: #1a1a1a;
                 border: 2px solid #333;
-                border-radius: 2px;
+                border-radius: 6px;
             }
         """)
         preview_layout = QVBoxLayout(preview)
@@ -157,7 +148,7 @@ class MainWindow(QMainWindow):
         btn.setStyleSheet("""
             QPushButton {
                 background-color: #0078d4; color: #fff;
-                border: 1px solid #0066b8; border-radius: 3px;
+                border: 1px solid #0066b8; border-radius: 6px;
                 padding: 5px 16px; font-size: 13px;
             }
             QPushButton:hover { background-color: #0066b8; }
@@ -171,7 +162,7 @@ class MainWindow(QMainWindow):
         btn.setStyleSheet("""
             QPushButton {
                 background-color: #c42b1c; color: #fff;
-                border: 1px solid #a52010; border-radius: 3px;
+                border: 1px solid #a52010; border-radius: 6px;
                 padding: 5px 16px; font-size: 13px;
             }
             QPushButton:hover { background-color: #a52010; }
@@ -200,7 +191,7 @@ class MainWindow(QMainWindow):
         btn = QPushButton(text)
         btn.setStyleSheet("""
             QPushButton {
-                background: #f5f5f5; border: 1px solid #aaa; border-radius: 3px;
+                background: #f5f5f5; border: 1px solid #aaa; border-radius: 6px;
                 padding: 5px 16px; font-size: 13px; color: #333;
             }
             QPushButton:hover { background: #e5e5e5; }
@@ -450,7 +441,7 @@ class MainWindow(QMainWindow):
         device_list.addItem("  VirtualBox Host-Only - 192.168.56.1")
         device_list.setStyleSheet("""
             QListWidget {
-                border: 1px solid #aaa; border-radius: 3px;
+                border: 1px solid #aaa; border-radius: 6px;
                 background: #fafafa; font-size: 12px; color: #555;
             }
         """)
@@ -468,8 +459,11 @@ class MainWindow(QMainWindow):
             QFrame#ptzPanel {
                 background-color: #f8f8f8;
                 border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                margin: 0px;
+                border-radius: 6px;
+                margin-left: 16px;
+                margin-right: 16px;
+                margin-top: 0px;
+                margin-bottom: 0px;
             }
         """)
 
@@ -500,7 +494,7 @@ class MainWindow(QMainWindow):
             b.setStyleSheet("""
                 QPushButton {
                     font-size: 12px; padding: 0; border: 1px solid #aaa;
-                    border-radius: 3px; background: #f5f5f5; color: #333;
+                    border-radius: 6px; background: #f5f5f5; color: #333;
                 }
                 QPushButton:hover { background: #e5e5e5; }
                 QPushButton:pressed { background: #d0d0d0; }
@@ -518,7 +512,7 @@ class MainWindow(QMainWindow):
         center.setStyleSheet("""
             QPushButton {
                 font-size: 10px; padding: 0; border: 1px solid #aaa;
-                border-radius: 3px; background: #e0e0e0; color: #888;
+                border-radius: 6px; background: #e0e0e0; color: #888;
             }
             QPushButton:hover { background: #d0d0d0; }
         """)
@@ -541,7 +535,7 @@ class MainWindow(QMainWindow):
             b.setStyleSheet("""
                 QPushButton {
                     font-size: 11px; padding: 4px 8px;
-                    border: 1px solid #aaa; border-radius: 3px;
+                    border: 1px solid #aaa; border-radius: 6px;
                     background: #f5f5f5; color: #333;
                 }
                 QPushButton:hover { background: #e5e5e5; }
@@ -574,7 +568,7 @@ class MainWindow(QMainWindow):
             b.setStyleSheet("""
                 QPushButton {
                     font-size: 11px; padding: 4px 16px;
-                    border: 1px solid #aaa; border-radius: 3px;
+                    border: 1px solid #aaa; border-radius: 6px;
                     background: #f5f5f5; color: #333;
                 }
                 QPushButton:hover { background: #e5e5e5; }
@@ -625,7 +619,7 @@ def main():
         /* ── ComboBox：使用 SVG 标准箭头 ── */
         QComboBox {{
             color: #333; background-color: #fff;
-            border: 1px solid #aaa; border-radius: 3px;
+            border: 1px solid #aaa; border-radius: 6px;
             padding: 4px 28px 4px 8px;
         }}
         QComboBox::drop-down {{
@@ -638,7 +632,7 @@ def main():
             width: 12px; height: 8px;
         }}
         QComboBox QAbstractItemView {{
-            color: #333; background-color: #fff; border: 1px solid #aaa;
+            color: #333; background-color: #fff; border: 1px solid #aaa; border-radius: 6px;
             selection-background-color: #0078d4; selection-color: #fff;
             outline: none;
         }}
@@ -661,14 +655,17 @@ def main():
             border-bottom: 1px solid #ccc;
             border-top: none;
             background-color: #fff;
-            border-radius: 0 0 4px 4px;
+            border-radius: 0 0 6px 6px;
         }}
         QTabBar::tab {{
             background-color: #e8e8e8; color: #777;
             padding: 8px 20px;
             border: 1px solid #ccc;
             border-bottom: 1px solid #ccc;
-            border-radius: 4px 4px 0 0;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            border-bottom-left-radius: 0px;
+            border-bottom-right-radius: 0px;
             margin-right: 2px;
             margin-bottom: -1px;
             font-size: 13px;
