@@ -1,0 +1,41 @@
+2026-04-30 16:10:16 [INFO] ptzcam: Logging to file: C:\Users\asuka\WorkBuddy\20260429153616\ptzcam-qt6\logs\ptzcam_20260430_161016.log
+2026-04-30 16:10:16 [INFO] ptzcam: Logging level: DEBUG
+2026-04-30 16:10:16 [INFO] ptzcam.main: ==================================================
+2026-04-30 16:10:16 [INFO] ptzcam.main: PTZ-Cam-Tools Starting...
+2026-04-30 16:10:16 [INFO] ptzcam.main: Debug mode: True
+2026-04-30 16:10:16 [INFO] ptzcam.main: ==================================================
+2026-04-30 16:10:16 [DEBUG] ptzcam.main: DPI policy configured
+2026-04-30 16:10:16 [DEBUG] ptzcam.main: QApplication created
+2026-04-30 16:10:16 [DEBUG] ptzcam.main: Stylesheet applied
+2026-04-30 16:10:16 [DEBUG] ptzcam.app.main_window: Window size: 960x850
+2026-04-30 16:10:16 [DEBUG] ptzcam.app.main_window: Created 5 tabs
+2026-04-30 16:10:16 [DEBUG] ptzcam.app.main_window: Created 4 preview widgets
+2026-04-30 16:10:16 [DEBUG] ptzcam.app.main_window: Main window UI setup complete
+2026-04-30 16:10:16 [INFO] ptzcam.main: Main window displayed
+2026-04-30 16:10:16 [INFO] ptzcam.main: Entering event loop...
+2026-04-30 16:10:22 [DEBUG] ptzcam.app.main_window: Tab changed to: RTSP
+2026-04-30 16:10:22 [DEBUG] ptzcam.app.main_window: Status updated: 未连接
+2026-04-30 16:10:23 [DEBUG] ptzcam.app.main_window: Tab changed to: NDI
+2026-04-30 16:10:23 [DEBUG] ptzcam.app.main_window: Status updated: 未连接
+2026-04-30 16:10:24 [DEBUG] ptzcam.app.main_window: Tab changed to: ONVIF
+2026-04-30 16:10:24 [DEBUG] ptzcam.app.main_window: Status updated: 未连接
+2026-04-30 16:10:24 [DEBUG] ptzcam.app.main_window: Tab changed to: 设置
+2026-04-30 16:10:24 [DEBUG] ptzcam.app.main_window: Status updated: 设置
+2026-04-30 16:10:25 [DEBUG] ptzcam.app.main_window: Tab changed to: USB
+2026-04-30 16:10:25 [DEBUG] ptzcam.app.main_window: Status updated: 就绪
+2026-04-30 16:10:26 [DEBUG] ptzcam.app.main_window: Status updated: 播放中
+2026-04-30 16:10:29 [DEBUG] ptzcam.app.main_window: Status updated: 播放中
+2026-04-30 16:10:30 [DEBUG] ptzcam.app.main_window: Status updated: 播放中
+2026-04-30 16:10:32 [DEBUG] ptzcam.app.main_window: Status updated: PTZ Home
+2026-04-30 16:10:33 [DEBUG] ptzcam.app.main_window: Status updated: PTZ Home
+2026-04-30 16:10:33 [DEBUG] ptzcam.app.main_window: Status updated: PTZ Home
+2026-04-30 16:10:33 [DEBUG] ptzcam.app.main_window: Status updated: PTZ Home
+2026-04-30 16:10:33 [DEBUG] ptzcam.app.main_window: Status updated: PTZ Home
+2026-04-30 16:10:34 [DEBUG] ptzcam.app.main_window: Status updated: Zoom +
+2026-04-30 16:10:34 [DEBUG] ptzcam.app.main_window: Status updated: Zoom +
+2026-04-30 16:10:34 [DEBUG] ptzcam.app.main_window: Status updated: Zoom +
+2026-04-30 16:10:34 [DEBUG] ptzcam.app.main_window: Status updated: PTZ 右
+2026-04-30 16:10:36 [DEBUG] ptzcam.app.main_window: Status updated: VISCA 串口已开启
+2026-04-30 16:10:36 [DEBUG] ptzcam.app.main_window: Status updated: VISCA 串口已开启
+2026-04-30 16:10:37 [DEBUG] ptzcam.app.main_window: Status updated: VISCA 串口已开启
+2026-04-30 16:10:37 [DEBUG] ptzcam.app.main_window: Status updated: VISCA 串口已开启

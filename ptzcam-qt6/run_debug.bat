@@ -1,11 +1,13 @@
 @echo off
 chcp 65001 >nul
-REM PTZ-Cam-Tools Launcher
-REM Quick start script for normal mode
+REM PTZ-Cam-Tools Debug Launcher
+REM Starts application with verbose logging
 
 echo ==========================================
-echo PTZ-Cam-Tools Starting...
+echo PTZ-Cam-Tools DEBUG MODE
 echo ==========================================
+echo.
+echo Debug logs will be saved to: logs\ptzcam_*.log
 echo.
 
 REM Change to script directory
@@ -19,9 +21,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Run application
-echo Starting PTZ-Cam-Tools...
-python main.py
+REM Run application in debug mode
+echo Starting PTZ-Cam-Tools in DEBUG mode...
+echo.
+python main.py --debug
 
 if errorlevel 1 (
     echo.

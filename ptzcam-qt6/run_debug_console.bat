@@ -1,11 +1,14 @@
 @echo off
 chcp 65001 >nul
-REM PTZ-Cam-Tools Launcher
-REM Quick start script for normal mode
+REM PTZ-Cam-Tools Debug Console Mode
+REM Debug output to console only (no log files)
 
 echo ==========================================
-echo PTZ-Cam-Tools Starting...
+echo PTZ-Cam-Tools DEBUG CONSOLE MODE
 echo ==========================================
+echo.
+echo Debug output will only show in this console
+echo No log files will be created
 echo.
 
 REM Change to script directory
@@ -19,9 +22,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Run application
+REM Run application in debug mode without file logging
 echo Starting PTZ-Cam-Tools...
-python main.py
+echo.
+python main.py --debug --no-log-file
 
 if errorlevel 1 (
     echo.

@@ -1,0 +1,7 @@
+# PTZ-Cam-Tools Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core UI Framework
+PySide6>=6.11.0
+
+# Logging (stdlib only, no external deps required)
