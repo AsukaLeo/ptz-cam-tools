@@ -15,16 +15,14 @@ from PySide6.QtCore import QObject, Signal, QThread, QMutex, QWaitCondition
 from PySide6.QtGui import QImage
 
 
-# Windows COM imports
+# Import OpenCV
 try:
-    import comtypes
-    import comtypes.client
-    from comtypes import GUID, STDMETHOD, HRESULT, COMError
-    from comtypes.automation import BSTR, VARIANT
-    _HAS_COMTYPES = True
+    import cv2
+    _HAS_CV2 = True
 except ImportError:
-    _HAS_COMTYPES = False
-    print("Warning: comtypes not available, DirectShow features disabled")
+    cv2 = None
+    _HAS_CV2 = False
+    print("Warning: OpenCV not available")
 
 
 class DShowFormatType(IntEnum):
@@ -112,9 +110,7 @@ class DirectShowCapture(QObject):
         Returns:
             List of available capture devices with formats.
         """
-        try:
-            import cv2
-        except ImportError:
+        if not _HAS_CV2 or cv2 is None:
             print("OpenCV not available")
             return []
         
@@ -122,33 +118,33 @@ class DirectShowCapture(QObject):
         index = 0
         
         while True:
-            cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
-            if not cap.isOpened():
-                cap.release()
-                break
-            
-            # Get device name
-            name = f"Camera {index}"
+            cap = None
             try:
-                # Try to get device info from backend
-                ret, backend_name = cap.getBackendName()
-                if ret:
-                    name = backend_name
-            except:
-                pass
+                cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+                if not cap.isOpened():
+                    break
+                
+                # Get device name - keep simple
+                name = f"USB Camera {index + 1}"
+                
+                # Enumerate supported formats
+                formats = DirectShowCapture._enumerate_formats(cap)
+                
+                device = DShowDevice(
+                    index=index,
+                    name=name,
+                    device_path=f"video={index}",
+                    formats=formats
+                )
+                devices.append(device)
+                
+            except Exception as e:
+                print(f"Error enumerating device {index}: {e}")
+                break
+            finally:
+                if cap:
+                    cap.release()
             
-            # Enumerate supported formats
-            formats = DirectShowCapture._enumerate_formats(cap)
-            
-            device = DShowDevice(
-                index=index,
-                name=name,
-                device_path=f"video={index}",
-                formats=formats
-            )
-            devices.append(device)
-            
-            cap.release()
             index += 1
             
             # Safety limit
@@ -317,9 +313,8 @@ class CaptureThread(QThread):
     
     def run(self) -> None:
         """Thread main loop."""
-        try:
-            import cv2
-        except ImportError:
+        global cv2
+        if cv2 is None:
             self.error_occurred.emit("OpenCV not available")
             return
         
@@ -378,11 +373,11 @@ class CaptureThread(QThread):
         Returns:
             QImage or None.
         """
-        if frame is None or frame.size == 0:
+        global cv2
+        if frame is None or frame.size == 0 or cv2 is None:
             return None
         
         # Convert BGR to RGB
-        import cv2
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
         height, width = rgb_frame.shape[:2]

@@ -187,7 +187,9 @@ class USBTab(QWidget):
         self.play_btn.setEnabled(False)
         
         # Enumerate devices using DirectShow (for H264 support)
+        self._logger.debug("Calling DirectShowCapture.enumerate_devices()...")
         self._dshow_devices = DirectShowCapture.enumerate_devices()
+        self._logger.debug(f"DirectShow returned {len(self._dshow_devices)} device(s)")
         
         if not self._dshow_devices:
             self.device_combo.addItem("未检测到设备", -1)
@@ -197,11 +199,7 @@ class USBTab(QWidget):
         
         # Populate device combo
         for i, device in enumerate(self._dshow_devices):
-            display_text = f"{device.name}"
-            # Show H264 support indicator
-            h264_count = len(device.get_h264_formats())
-            if h264_count > 0:
-                display_text += f" [H264×{h264_count}]"
+            display_text = device.name
             self.device_combo.addItem(display_text, i)
             self._logger.debug(f"Found device: {device.name} ({len(device.formats)} formats)")
         
