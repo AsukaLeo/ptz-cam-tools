@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QFrame, QStatusBar, QListWidget, QSizeGrip
 )
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QResizeEvent
+from PySide6.QtGui import QResizeEvent, QPainterPath, QRegion
 
 
 # ── 窗口比例常量 ──────────────────────────────────────────────
@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
         self._update_preview_size()
 
     def _update_preview_size(self):
-        """动态调整所有预览帧高度，按 16:9 比例"""
+        """限制预览区最大高度为 16:9 比例，让布局自动分配剩余空间"""
         for frame in self._preview_frames:
             if not frame.isVisible():
                 continue
@@ -82,11 +82,12 @@ class MainWindow(QMainWindow):
 
             # 预览区宽度 = tab 页面宽度 - 32（左右 padding）
             content_w = parent.width() - 32
-            # 高度按 16:9 比例
-            target_h = int(content_w * 9 / 16)
-            target_h = max(target_h, 120)
+            # 最大高度按 16:9 比例限制
+            max_h = int(content_w * 9 / 16)
+            max_h = max(max_h, 120)
 
-            frame.setFixedHeight(target_h)
+            frame.setMaximumHeight(max_h)
+            frame.setMinimumHeight(120)
 
     # ── UI 构建 ────────────────────────────────────────────────
     def setup_ui(self):
@@ -94,8 +95,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
         main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(0, 12, 0, 0)  # 顶部留 12px 给 Tab
-        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(16, 6, 16, 6)  # 统一 16px 左右边距，6px 上下间距
+        main_layout.setSpacing(6)  # Tab 与 PTZ 之间 6px 间距
 
         # Tab widget
         self.create_tab_widget(main_layout)
@@ -128,7 +129,10 @@ class MainWindow(QMainWindow):
             QFrame#preview {
                 background-color: #1a1a1a;
                 border: 2px solid #333;
-                border-radius: 6px;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                border-bottom-left-radius: 6px;
+                border-bottom-right-radius: 6px;
             }
         """)
         preview_layout = QVBoxLayout(preview)
@@ -215,8 +219,10 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(16, 12, 16, 8)
         layout.setSpacing(8)
 
-        # 设备控制卡片
-        card1, card1_layout = self._make_control_card()
+        # 设备 & 参数控制卡片（合并为一个卡片，两行）
+        card, card_layout = self._make_control_card()
+
+        # 第一行：设备选择
         device_row = QHBoxLayout()
         device_row.setSpacing(8)
         device_label = QLabel("设备:")
@@ -227,41 +233,37 @@ class MainWindow(QMainWindow):
         device_row.addWidget(self._make_btn("刷新", lambda: self.update_status("刷新设备列表...")))
         device_row.addWidget(self._make_primary_btn("播放", lambda: self.update_status("播放中")))
         device_row.addStretch()
-        card1_layout.addLayout(device_row)
-        layout.addWidget(card1)
+        card_layout.addLayout(device_row)
 
-        # Preview — 不用 stretch，固定高度由 _update_preview_size 管理
-        layout.addWidget(self._create_preview())
-
-        # 参数控制卡片
-        card2, card2_layout = self._make_control_card()
-        control_row = QHBoxLayout()
-        control_row.setSpacing(16)
+        # 第二行：分辨率 / 格式 / 帧率
+        param_row = QHBoxLayout()
+        param_row.setSpacing(16)
 
         lbl1 = QLabel("分辨率:")
-        lbl1.setFixedWidth(50)
+        lbl1.setFixedWidth(80)
         lbl1.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        c1 = self._make_combo(["1920 x 1080", "1280 x 720", "640 x 480"])
+        param_row.addWidget(lbl1)
+        param_row.addWidget(self._make_combo(["1920 x 1080", "1280 x 720", "640 x 480"]))
 
         lbl2 = QLabel("格式:")
         lbl2.setFixedWidth(50)
         lbl2.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        c2 = self._make_combo(["YUY2", "MJPEG", "H264"])
+        param_row.addWidget(lbl2)
+        param_row.addWidget(self._make_combo(["YUY2", "MJPEG", "H264"]))
 
         lbl3 = QLabel("帧率:")
         lbl3.setFixedWidth(50)
         lbl3.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        c3 = self._make_combo(["30 fps", "25 fps", "15 fps"])
+        param_row.addWidget(lbl3)
+        param_row.addWidget(self._make_combo(["30 fps", "25 fps", "15 fps"]))
 
-        control_row.addWidget(lbl1)
-        control_row.addWidget(c1)
-        control_row.addWidget(lbl2)
-        control_row.addWidget(c2)
-        control_row.addWidget(lbl3)
-        control_row.addWidget(c3)
-        control_row.addStretch()
-        card2_layout.addLayout(control_row)
-        layout.addWidget(card2)
+        param_row.addStretch()
+        card_layout.addLayout(param_row)
+
+        layout.addWidget(card)
+
+        # Preview — stretch=1 自动填充，maxHeight 由 _update_preview_size 限制
+        layout.addWidget(self._create_preview(), 1)
 
         return page
 
@@ -324,8 +326,8 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(card1)
 
-        # Preview
-        layout.addWidget(self._create_preview())
+        # Preview — stretch=1 自动填充
+        layout.addWidget(self._create_preview(), 1)
 
         return page
 
@@ -350,7 +352,8 @@ class MainWindow(QMainWindow):
         card_layout.addLayout(src_row)
         layout.addWidget(card)
 
-        layout.addWidget(self._create_preview())
+        # Preview — stretch=1 自动填充
+        layout.addWidget(self._create_preview(), 1)
         return page
 
     def create_onvif_tab(self):
@@ -402,7 +405,7 @@ class MainWindow(QMainWindow):
         card_layout.addLayout(auth_row)
 
         layout.addWidget(card)
-        layout.addWidget(self._create_preview())
+        layout.addWidget(self._create_preview(), 1)
         return page
 
     def create_settings_tab(self):
@@ -460,10 +463,10 @@ class MainWindow(QMainWindow):
                 background-color: #f8f8f8;
                 border: 1px solid #e0e0e0;
                 border-radius: 6px;
-                margin-left: 16px;
-                margin-right: 16px;
+                margin-left: 0px;
+                margin-right: 0px;
                 margin-top: 0px;
-                margin-bottom: 0px;
+                margin-bottom: 6px;
             }
         """)
 
@@ -584,6 +587,7 @@ class MainWindow(QMainWindow):
         controls_layout.addStretch()
         layout.addLayout(controls_layout)
         parent_layout.addWidget(ptz_panel)
+        self._ptz_panel = ptz_panel
 
     # ── Tab 切换 / 状态 ────────────────────────────────────────
     def on_tab_changed(self, index):
@@ -609,12 +613,17 @@ def main():
     # 下拉箭头图标路径
     _arrow_svg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "arrow_down.svg").replace("\\", "/")
 
-    # 全局强制浅色主题
+    # 全局强制浅色主题（QWidget 背景透明，让父容器背景透上来）
     app.setStyleSheet(f"""
-        QWidget {{ color: #333; background-color: #fff; }}
+        QWidget {{ color: #333; }}
+        QMainWindow {{ background-color: #fff; }}
         QPushButton {{ color: #333; background-color: #f5f5f5; }}
         QLabel {{ color: #333; background-color: transparent; }}
-        QLineEdit {{ color: #333; background-color: #fff; }}
+        QLineEdit {{
+            color: #333; background-color: #fff;
+            border: 1px solid #aaa; border-radius: 6px;
+            padding: 4px 8px;
+        }}
 
         /* ── ComboBox：使用 SVG 标准箭头 ── */
         QComboBox {{
@@ -645,17 +654,26 @@ def main():
 
         QStatusBar {{ color: #333; background-color: #f0f0f0; }}
         QStatusBar QLabel {{ color: #555; background-color: transparent; }}
-        QListWidget {{ color: #555; background-color: #fafafa; }}
+        QListWidget {{
+            color: #555; background-color: #fafafa;
+            border: 1px solid #aaa; border-radius: 6px;
+        }}
         QListWidget::item:selected {{ background-color: #0078d4; color: #fff; }}
+
+        /* ── QTabWidget 去掉默认边框 ── */
+        QTabWidget {{
+            border: none;
+        }}
 
         /* ── Tab 样式：选中 Tab 与 Pane 融为一体 ── */
         QTabWidget::pane {{
-            border-left: 1px solid #ccc;
-            border-right: 1px solid #ccc;
-            border-bottom: 1px solid #ccc;
-            border-top: none;
+            border: 1px solid #ccc;
             background-color: #fff;
-            border-radius: 0 0 6px 6px;
+            border-top-left-radius: 0px;
+            border-top-right-radius: 0px;
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+            margin-top: -1px;
         }}
         QTabBar::tab {{
             background-color: #e8e8e8; color: #777;
@@ -666,8 +684,7 @@ def main():
             border-top-right-radius: 6px;
             border-bottom-left-radius: 0px;
             border-bottom-right-radius: 0px;
-            margin-right: 2px;
-            margin-bottom: -1px;
+            margin-right: 0px;
             font-size: 13px;
         }}
         QTabBar::tab:hover {{
@@ -677,6 +694,8 @@ def main():
             background-color: #fff; color: #0078d4;
             font-weight: 600;
             border-bottom-color: #fff;
+            margin-bottom: -1px;
+            margin-right: 0px;
         }}
 
         /* ── SizeGrip 样式 ── */
