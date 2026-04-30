@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addWidget(self.status_label)
 
         # 版本署名放到右下角
-        self.version_label = QLabel("Ver1.0 By Asuka")
+        self.version_label = QLabel("V 0.0.8430_c670e46")
         self.version_label.setStyleSheet("color: #999; font-size: 11px; background: transparent;")
         self.statusBar().addPermanentWidget(self.version_label)
 
