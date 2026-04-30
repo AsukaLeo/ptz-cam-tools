@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addWidget(self.status_label)
 
         # 版本署名放到右下角（去掉SizeGrip，避免空白区域）
-        self.version_label = QLabel("V 0.9.430_fe7ef2f By Asuka  ")
+        self.version_label = QLabel("V 0.9.430_b1d14b2 By Asuka  ")
         self.version_label.setStyleSheet("color: #999; font-size: 11px; background: transparent;")
         self.statusBar().addPermanentWidget(self.version_label)
 
@@ -576,16 +576,147 @@ class MainWindow(QMainWindow):
         hs.addWidget(wide_btn("Stop", lambda: self.update_status("PTZ 停止")))
         controls_layout.addLayout(hs)
 
-        # VISCA 控制区域
-        visca_widget = self._create_visca_control()
-        controls_layout.addWidget(visca_widget)
-
         controls_layout.addStretch()
         layout.addLayout(controls_layout)
-        parent_layout.addWidget(ptz_panel)
+
+        # 创建 VISCA 面板
+        visca_panel = self._create_visca_panel()
+
+        # PTZ 和 VISCA 左右并排
+        main_control_layout = QHBoxLayout()
+        main_control_layout.setSpacing(12)
+        main_control_layout.addWidget(ptz_panel, 1)
+        main_control_layout.addWidget(visca_panel, 1)
+        parent_layout.addLayout(main_control_layout)
+
         self._ptz_panel = ptz_panel
+        self._visca_panel = visca_panel
+
+    def _create_visca_panel(self):
+        """创建 VISCA 控制面板（与 PTZ 同级，左右排列）"""
+        visca_panel = QFrame()
+        visca_panel.setObjectName("viscaPanel")
+        visca_panel.setStyleSheet("""
+            QFrame#viscaPanel {
+                background-color: #f8f8f8;
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+                margin-left: 0px;
+                margin-right: 0px;
+                margin-top: 0px;
+                margin-bottom: 6px;
+            }
+        """)
+
+        layout = QVBoxLayout(visca_panel)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        title_label = QLabel("VISCA 控制")
+        title_label.setStyleSheet("""
+            QLabel {
+                font-size: 12px; font-weight: 500; color: #555;
+                background: transparent;
+            }
+        """)
+        layout.addWidget(title_label)
+
+        # Tab 切换：串口 / 网络
+        visca_tab = QTabWidget()
+        visca_tab.setDocumentMode(True)
+        visca_tab.setStyleSheet("""
+            QTabWidget::pane { border: none; background: transparent; }
+            QTabBar::tab {
+                background-color: #e0e0e0; color: #666;
+                padding: 4px 16px; border: 1px solid #ccc;
+                border-top-left-radius: 4px; border-top-right-radius: 4px;
+            }
+            QTabBar::tab:selected {
+                background-color: #fff; color: #333;
+                border-bottom-color: #fff;
+            }
+        """)
+
+        # 串口 Tab - 使用 QGridLayout 实现完美对齐
+        serial_page = QWidget()
+        serial_grid = QGridLayout(serial_page)
+        serial_grid.setContentsMargins(8, 8, 8, 8)
+        serial_grid.setSpacing(6)
+
+        # 第一行：端口 | 波特率 | 数据位
+        serial_grid.addWidget(QLabel("端口:"), 0, 0)
+        serial_grid.addWidget(self._make_combo(["COM1", "COM2", "COM3", "COM4"], 75), 0, 1)
+        serial_grid.addWidget(QLabel("波特率:"), 0, 2)
+        serial_grid.addWidget(self._make_combo(["9600", "19200", "38400", "57600", "115200"], 85), 0, 3)
+        serial_grid.addWidget(QLabel("数据位:"), 0, 4)
+        serial_grid.addWidget(self._make_combo(["8", "7", "6", "5"], 55), 0, 5)
+
+        # 第二行：校验位 | 停止位 | 开启按钮
+        serial_grid.addWidget(QLabel("校验位:"), 1, 0)
+        serial_grid.addWidget(self._make_combo(["None", "Odd", "Even", "Mark", "Space"], 75), 1, 1)
+        serial_grid.addWidget(QLabel("停止位:"), 1, 2)
+        serial_grid.addWidget(self._make_combo(["1", "1.5", "2"], 55), 1, 3)
+
+        serial_btn = QPushButton("开启")
+        serial_btn.setStyleSheet("""
+            QPushButton {
+                background: #0078d4; color: #fff; border: none; border-radius: 4px;
+                padding: 4px 20px; font-size: 12px;
+            }
+            QPushButton:hover { background: #0066b8; }
+        """)
+        serial_btn.clicked.connect(lambda: self.update_status("VISCA 串口已开启"))
+        serial_grid.addWidget(serial_btn, 1, 4, 1, 2, Qt.AlignCenter)
+
+        serial_grid.setColumnStretch(6, 1)
+        visca_tab.addTab(serial_page, "串口")
+
+        # 网络 Tab
+        net_page = QWidget()
+        net_grid = QGridLayout(net_page)
+        net_grid.setContentsMargins(8, 8, 8, 8)
+        net_grid.setSpacing(6)
+
+        # 协议
+        net_grid.addWidget(QLabel("协议:"), 0, 0)
+        proto_combo = self._make_combo(["TCP", "UDP"], 70)
+        net_grid.addWidget(proto_combo, 0, 1)
+
+        # 地址
+        net_grid.addWidget(QLabel("地址:"), 0, 2)
+        addr_edit = QLineEdit("192.168.50.254")
+        addr_edit.setFixedWidth(120)
+        net_grid.addWidget(addr_edit, 0, 3)
+
+        # 端口
+        net_grid.addWidget(QLabel("端口:"), 1, 0)
+        port_edit = QLineEdit("5678")
+        port_edit.setFixedWidth(60)
+        net_grid.addWidget(port_edit, 1, 1)
+
+        # 连接按钮
+        net_btn = QPushButton("连接")
+        net_btn.setStyleSheet("""
+            QPushButton {
+                background: #0078d4; color: #fff; border: none; border-radius: 4px;
+                padding: 4px 20px; font-size: 12px;
+            }
+            QPushButton:hover { background: #0066b8; }
+        """)
+        net_btn.clicked.connect(lambda: self.update_status("VISCA 网络已连接"))
+        net_grid.addWidget(net_btn, 1, 2, 1, 2, Qt.AlignCenter)
+
+        net_grid.setColumnStretch(4, 1)
+        visca_tab.addTab(net_page, "网络")
+
+        layout.addWidget(visca_tab)
+        return visca_panel
 
     def _create_visca_control(self):
+        """已废弃，使用 _create_visca_panel"""
+        pass
+
+    def _old_visca_frame(self):
         """创建 VISCA 控制区域（串口 + 网络）"""
         visca_frame = QFrame()
         visca_frame.setObjectName("viscaFrame")
@@ -739,6 +870,10 @@ class MainWindow(QMainWindow):
         visca_layout.addWidget(visca_tab)
 
         return visca_frame
+
+    def _create_visca_control(self):
+        """已废弃，使用 _create_visca_panel"""
+        pass
 
     # ── Tab 切换 / 状态 ────────────────────────────────────────
     def on_tab_changed(self, index):
