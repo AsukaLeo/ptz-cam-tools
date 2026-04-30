@@ -25,6 +25,48 @@ except ImportError:
     print("Warning: OpenCV not available")
 
 
+# Windows API to get device friendly name
+def get_device_friendly_name(index: int) -> str:
+    """Get DirectShow device friendly name using Windows SetupAPI.
+    
+    Args:
+        index: Device index.
+        
+    Returns:
+        Device friendly name or default name.
+    """
+    try:
+        import winreg
+        # Try to read from registry
+        try:
+            key_path = r"SYSTEM\CurrentControlSet\Control\Class\{6bdd1fc6-810f-11d0-bec7-08002be2092f}"
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+                # Enumerate subkeys to find camera devices
+                sub_index = 0
+                camera_count = 0
+                while True:
+                    try:
+                        subkey_name = winreg.EnumKey(key, sub_index)
+                        with winreg.OpenKey(key, subkey_name) as subkey:
+                            try:
+                                friendly_name, _ = winreg.QueryValueEx(subkey, "FriendlyName")
+                                if camera_count == index:
+                                    return friendly_name
+                                camera_count += 1
+                            except FileNotFoundError:
+                                pass
+                        sub_index += 1
+                    except OSError:
+                        break
+        except Exception:
+            pass
+    except ImportError:
+        pass
+    
+    # Fallback: return default name
+    return f"Camera {index + 1}"
+
+
 class DShowFormatType(IntEnum):
     """DirectShow format types."""
     YUY2 = 0x32595559  # 'YUY2'
@@ -124,8 +166,8 @@ class DirectShowCapture(QObject):
                 if not cap.isOpened():
                     break
                 
-                # Get device name - keep simple
-                name = f"USB Camera {index + 1}"
+                # Get device name using Windows API
+                name = get_device_friendly_name(index)
                 
                 # Enumerate supported formats
                 formats = DirectShowCapture._enumerate_formats(cap)
