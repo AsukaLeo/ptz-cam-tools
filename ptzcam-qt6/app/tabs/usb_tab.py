@@ -426,18 +426,40 @@ class USBTab(QWidget):
         Args:
             image: Video frame as QImage.
         """
-        if self.preview_widget and hasattr(self.preview_widget, 'set_video_frame'):
+        self._logger.debug(f"Frame received: {image.width()}x{image.height()}")
+        
+        if not self.preview_widget:
+            self._logger.warning("No preview widget available")
+            return
+        
+        if not hasattr(self.preview_widget, 'set_video_frame'):
+            self._logger.warning("Preview widget missing set_video_frame method")
+            return
+        
+        try:
             # Convert to pixmap and display
             from PySide6.QtGui import QPixmap
             pixmap = QPixmap.fromImage(image)
+            
+            if pixmap.isNull():
+                self._logger.warning("Failed to convert image to pixmap")
+                return
+            
             # Scale to fit the video frame
             target_size = self.preview_widget.video_frame.size()
+            self._logger.debug(f"Scaling to: {target_size.width()}x{target_size.height()}")
+            
             scaled = pixmap.scaled(
                 target_size,
                 Qt.KeepAspectRatio,
                 Qt.SmoothTransformation
             )
+            
             self.preview_widget.set_video_frame(scaled)
+            self._logger.debug("Frame displayed successfully")
+            
+        except Exception as e:
+            self._logger.error(f"Error displaying frame: {e}")
     
     def _on_capture_error(self, error: str) -> None:
         """Handle capture error.

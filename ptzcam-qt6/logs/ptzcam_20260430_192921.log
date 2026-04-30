@@ -1,0 +1,44 @@
+2026-04-30 19:29:21 [INFO] ptzcam: Logging to file: C:\Users\asuka\WorkBuddy\20260429153616\ptzcam-qt6\logs\ptzcam_20260430_192921.log
+2026-04-30 19:29:21 [INFO] ptzcam: Logging level: DEBUG
+2026-04-30 19:29:21 [INFO] ptzcam.main: ==================================================
+2026-04-30 19:29:21 [INFO] ptzcam.main: PTZ-Cam-Tools Starting...
+2026-04-30 19:29:21 [INFO] ptzcam.main: Debug mode: True
+2026-04-30 19:29:21 [INFO] ptzcam.main: ==================================================
+2026-04-30 19:29:21 [DEBUG] ptzcam.main: DPI policy configured
+2026-04-30 19:29:21 [DEBUG] ptzcam.main: QApplication created
+2026-04-30 19:29:21 [DEBUG] ptzcam.main: Stylesheet applied
+2026-04-30 19:29:21 [DEBUG] ptzcam.app.main_window: Window size: 960x850
+2026-04-30 19:29:21 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices via DirectShow...
+2026-04-30 19:29:21 [DEBUG] ptzcam.app.tabs.usb_tab: Qt enumeration found 2 device(s)
+2026-04-30 19:29:21 [DEBUG] ptzcam.app.tabs.usb_tab: Calling DirectShowCapture.enumerate_devices()...
+2026-04-30 19:29:49 [DEBUG] ptzcam.app.tabs.usb_tab: DirectShow returned 1 device(s)
+2026-04-30 19:29:49 [DEBUG] ptzcam.app.tabs.usb_tab: Found device: Integrated Camera (3 formats)
+2026-04-30 19:29:49 [DEBUG] ptzcam.app.tabs.usb_tab: Selected device: Integrated Camera
+2026-04-30 19:29:49 [DEBUG] ptzcam.app.tabs.usb_tab: Resolution changed to: 1280x720
+2026-04-30 19:29:49 [DEBUG] ptzcam.app.tabs.usb_tab: Device Integrated Camera: 3 resolutions, H264: 0
+2026-04-30 19:29:49 [DEBUG] ptzcam.app.tabs.usb_tab: Selected device: Integrated Camera
+2026-04-30 19:29:49 [DEBUG] ptzcam.app.tabs.usb_tab: Resolution changed to: 1280x720
+2026-04-30 19:29:49 [DEBUG] ptzcam.app.tabs.usb_tab: Device Integrated Camera: 3 resolutions, H264: 0
+2026-04-30 19:29:49 [INFO] ptzcam.app.tabs.usb_tab: Detected 1 USB camera(s)
+2026-04-30 19:29:50 [DEBUG] ptzcam.app.main_window: Created 5 tabs
+2026-04-30 19:29:50 [DEBUG] ptzcam.app.main_window: Created 4 preview widgets
+2026-04-30 19:29:50 [DEBUG] ptzcam.app.main_window: Main window UI setup complete
+2026-04-30 19:29:50 [INFO] ptzcam.main: Main window displayed
+2026-04-30 19:29:50 [INFO] ptzcam.main: Entering event loop...
+2026-04-30 19:29:57 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices via DirectShow...
+2026-04-30 19:29:57 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 19:29:57 [DEBUG] ptzcam.app.tabs.usb_tab: Qt enumeration found 2 device(s)
+2026-04-30 19:29:57 [DEBUG] ptzcam.app.tabs.usb_tab: Calling DirectShowCapture.enumerate_devices()...
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: DirectShow returned 1 device(s)
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: Found device: Integrated Camera (3 formats)
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: Selected device: Integrated Camera
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: Resolution changed to: 1280x720
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: Device Integrated Camera: 3 resolutions, H264: 0
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: Selected device: Integrated Camera
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: Resolution changed to: 1280x720
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: Device Integrated Camera: 3 resolutions, H264: 0
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: Selected device: Integrated Camera
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: Resolution changed to: 1280x720
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.tabs.usb_tab: Device Integrated Camera: 3 resolutions, H264: 0
+2026-04-30 19:30:12 [DEBUG] ptzcam.app.main_window: Status updated: 检测到 1 个设备
+2026-04-30 19:30:12 [INFO] ptzcam.app.tabs.usb_tab: Detected 1 USB camera(s)

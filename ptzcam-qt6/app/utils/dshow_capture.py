@@ -14,6 +14,8 @@ from enum import IntEnum
 from PySide6.QtCore import QObject, Signal, QThread, QMutex, QWaitCondition
 from PySide6.QtGui import QImage
 
+from app.utils.logger import get_logger
+
 
 # Import OpenCV
 try:
@@ -388,16 +390,27 @@ class CaptureThread(QThread):
             self.state_changed.emit('playing')
             
             # Capture loop
+            logger = get_logger(__name__)
+            frame_count = 0
+            
             while not self._stop_flag:
                 ret, frame = self._cap.read()
                 
                 if not ret:
                     continue
                 
+                frame_count += 1
+                if frame_count == 1:
+                    logger.debug(f"First frame captured: {frame.shape}")
+                elif frame_count % 30 == 0:
+                    logger.debug(f"Captured {frame_count} frames")
+                
                 # Convert OpenCV frame to QImage
                 image = self._cv_frame_to_qimage(frame)
                 if image:
                     self.frame_ready.emit(image)
+                else:
+                    logger.warning("Failed to convert frame to QImage")
             
         except Exception as e:
             self.error_occurred.emit(f"Capture error: {e}")

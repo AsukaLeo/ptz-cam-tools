@@ -1,0 +1,37 @@
+2026-04-30 19:41:49 [INFO] ptzcam: Logging to file: C:\Users\asuka\WorkBuddy\20260429153616\ptzcam-qt6\logs\ptzcam_20260430_194149.log
+2026-04-30 19:41:49 [INFO] ptzcam: Logging level: DEBUG
+2026-04-30 19:41:49 [INFO] ptzcam.main: ==================================================
+2026-04-30 19:41:49 [INFO] ptzcam.main: PTZ-Cam-Tools Starting...
+2026-04-30 19:41:49 [INFO] ptzcam.main: Debug mode: True
+2026-04-30 19:41:49 [INFO] ptzcam.main: ==================================================
+2026-04-30 19:41:49 [DEBUG] ptzcam.main: DPI policy configured
+2026-04-30 19:41:49 [DEBUG] ptzcam.main: QApplication created
+2026-04-30 19:41:49 [DEBUG] ptzcam.main: Stylesheet applied
+2026-04-30 19:41:49 [DEBUG] ptzcam.app.main_window: Window size: 960x850
+2026-04-30 19:41:49 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices via DirectShow...
+2026-04-30 19:41:49 [DEBUG] ptzcam.app.tabs.usb_tab: Qt enumeration found 1 device(s)
+2026-04-30 19:41:49 [DEBUG] ptzcam.app.tabs.usb_tab: Calling DirectShowCapture.enumerate_devices()...
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.tabs.usb_tab: DirectShow returned 2 device(s)
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.tabs.usb_tab: Found device: Integrated Camera (3 formats)
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.tabs.usb_tab: Found device: Camera 2 (4 formats)
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.tabs.usb_tab: Selected device: Integrated Camera
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.tabs.usb_tab: Resolution changed to: 1280x720
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.tabs.usb_tab: Device Integrated Camera: 3 resolutions, H264: 0
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.tabs.usb_tab: Selected device: Integrated Camera
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.tabs.usb_tab: Resolution changed to: 1280x720
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.tabs.usb_tab: Device Integrated Camera: 3 resolutions, H264: 0
+2026-04-30 19:41:53 [INFO] ptzcam.app.tabs.usb_tab: Detected 2 USB camera(s)
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.main_window: Created 5 tabs
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.main_window: Created 4 preview widgets
+2026-04-30 19:41:53 [DEBUG] ptzcam.app.main_window: Main window UI setup complete
+2026-04-30 19:41:53 [INFO] ptzcam.main: Main window displayed
+2026-04-30 19:41:53 [INFO] ptzcam.main: Entering event loop...
+2026-04-30 19:41:57 [INFO] ptzcam.app.tabs.usb_tab: Starting playback for device: Integrated Camera
+2026-04-30 19:41:57 [DEBUG] ptzcam.app.main_window: Status updated: 正在启动视频...
+2026-04-30 19:41:57 [DEBUG] ptzcam.app.tabs.usb_tab: Using format: 1280x720 @ 30.0fps (YUY2)
+2026-04-30 19:41:57 [DEBUG] ptzcam.app.main_window: Status updated: 视频播放中
+2026-04-30 19:41:58 [DEBUG] ptzcam.app.tabs.usb_tab: Capture state: playing
+2026-04-30 19:42:11 [INFO] ptzcam.app.tabs.usb_tab: Stopping playback
+2026-04-30 19:42:11 [DEBUG] ptzcam.app.main_window: Status updated: 视频已停止
+2026-04-30 19:42:11 [DEBUG] ptzcam.app.tabs.usb_tab: Capture state: stopped
+2026-04-30 19:42:11 [DEBUG] ptzcam.app.tabs.usb_tab: Capture state: stopped

@@ -73,10 +73,12 @@ class PreviewWidget(QFrame):
         Args:
             pixmap: QPixmap to display.
         """
-        if pixmap:
+        if pixmap and not pixmap.isNull():
             self.video_label.setPixmap(pixmap)
-            self.video_label.show()
-            self.placeholder_label.hide()
+            if not self.video_label.isVisible():
+                self.video_label.show()
+            if self.placeholder_label.isVisible():
+                self.placeholder_label.hide()
     
     def update_video_size(self, container_width: int, container_height: int) -> None:
         """Update video frame size to maintain 16:9 aspect ratio.
