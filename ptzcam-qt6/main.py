@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addWidget(self.status_label)
 
         # 版本署名放到右下角（去掉SizeGrip，避免空白区域）
-        self.version_label = QLabel("V 0.9.430_93e7e0c By Asuka  ")
+        self.version_label = QLabel("V 0.9.430_fe7ef2f By Asuka  ")
         self.version_label.setStyleSheet("color: #999; font-size: 11px; background: transparent;")
         self.statusBar().addPermanentWidget(self.version_label)
 
@@ -597,8 +597,8 @@ class MainWindow(QMainWindow):
             }
         """)
         visca_layout = QVBoxLayout(visca_frame)
-        visca_layout.setContentsMargins(10, 10, 10, 10)
-        visca_layout.setSpacing(6)
+        visca_layout.setContentsMargins(10, 8, 10, 8)
+        visca_layout.setSpacing(4)
 
         # VISCA 标题
         visca_title = QLabel("VISCA 控制")
@@ -630,39 +630,43 @@ class MainWindow(QMainWindow):
         # 一行三列布局
         params_row = QHBoxLayout()
 
-        # 第一列：端口
-        col1 = QHBoxLayout()
-        col1.addWidget(QLabel("端口:"))
-        col1.addWidget(self._make_combo(["COM1", "COM2", "COM3", "COM4"], 70))
+        # 第一列：端口 + 波特率
+        col1 = QVBoxLayout()
+        col1.setSpacing(4)
+        port_row = QHBoxLayout()
+        port_row.addWidget(QLabel("端口:"))
+        port_row.addWidget(self._make_combo(["COM1", "COM2", "COM3", "COM4"], 70))
+        col1.addLayout(port_row)
+        baud_row = QHBoxLayout()
+        baud_row.addWidget(QLabel("波特率:"))
+        baud_row.addWidget(self._make_combo(["9600", "19200", "38400", "57600", "115200"], 80))
+        col1.addLayout(baud_row)
         params_row.addLayout(col1)
-        params_row.addSpacing(15)
+        params_row.addSpacing(20)
 
-        # 第二列：波特率
-        col2 = QHBoxLayout()
-        col2.addWidget(QLabel("波特率:"))
-        col2.addWidget(self._make_combo(["9600", "19200", "38400", "57600", "115200"], 80))
+        # 第二列：数据位 + 校验位
+        col2 = QVBoxLayout()
+        col2.setSpacing(4)
+        data_row = QHBoxLayout()
+        data_row.addWidget(QLabel("数据位:"))
+        data_row.addWidget(self._make_combo(["8", "7", "6", "5"], 50))
+        col2.addLayout(data_row)
+        parity_row = QHBoxLayout()
+        parity_row.addWidget(QLabel("校验位:"))
+        parity_row.addWidget(self._make_combo(["None", "Odd", "Even", "Mark", "Space"], 70))
+        col2.addLayout(parity_row)
         params_row.addLayout(col2)
-        params_row.addSpacing(15)
+        params_row.addSpacing(20)
 
-        # 第三列：数据位
-        col3 = QHBoxLayout()
-        col3.addWidget(QLabel("数据位:"))
-        col3.addWidget(self._make_combo(["8", "7", "6", "5"], 50))
+        # 第三列：停止位
+        col3 = QVBoxLayout()
+        col3.setSpacing(4)
+        stop_row = QHBoxLayout()
+        stop_row.addWidget(QLabel("停止位:"))
+        stop_row.addWidget(self._make_combo(["1", "1.5", "2"], 50))
+        col3.addLayout(stop_row)
+        col3.addStretch()
         params_row.addLayout(col3)
-        params_row.addSpacing(15)
-
-        # 第四列：校验位
-        col4 = QHBoxLayout()
-        col4.addWidget(QLabel("校验位:"))
-        col4.addWidget(self._make_combo(["None", "Odd", "Even", "Mark", "Space"], 70))
-        params_row.addLayout(col4)
-        params_row.addSpacing(15)
-
-        # 第五列：停止位
-        col5 = QHBoxLayout()
-        col5.addWidget(QLabel("停止位:"))
-        col5.addWidget(self._make_combo(["1", "1.5", "2"], 50))
-        params_row.addLayout(col5)
         params_row.addStretch()
 
         serial_layout.addLayout(params_row)
@@ -682,7 +686,6 @@ class MainWindow(QMainWindow):
         btn_row.addWidget(serial_btn)
         btn_row.addStretch()
         serial_layout.addLayout(btn_row)
-        serial_layout.addStretch()
 
         visca_tab.addTab(serial_page, "串口")
 
