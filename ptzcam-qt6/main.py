@@ -623,17 +623,33 @@ class MainWindow(QMainWindow):
 
         # Tab 切换：串口 / 网络
         visca_tab = QTabWidget()
-        visca_tab.setDocumentMode(True)
         visca_tab.setStyleSheet("""
-            QTabWidget::pane { border: none; background: transparent; }
+            QTabWidget {
+                background-color: #fff;
+            }
+            QTabWidget::pane {
+                border: 1px solid #ccc;
+                background-color: #fff;
+                border-bottom-left-radius: 6px;
+                border-bottom-right-radius: 6px;
+                border-top-left-radius: 0px;
+                border-top-right-radius: 0px;
+            }
             QTabBar::tab {
                 background-color: #e0e0e0; color: #666;
-                padding: 4px 16px; border: 1px solid #ccc;
-                border-top-left-radius: 4px; border-top-right-radius: 4px;
+                padding: 4px 16px;
+                border: 1px solid #ccc;
+                border-bottom: 1px solid #ccc;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                border-bottom-left-radius: 0px;
+                border-bottom-right-radius: 0px;
+                margin-right: 2px;
             }
             QTabBar::tab:selected {
                 background-color: #fff; color: #333;
                 border-bottom-color: #fff;
+                margin-bottom: -1px;
             }
         """)
 
@@ -645,17 +661,17 @@ class MainWindow(QMainWindow):
 
         # 第一行：端口 | 波特率 | 数据位
         serial_grid.addWidget(QLabel("端口:"), 0, 0)
-        serial_grid.addWidget(self._make_combo(["COM1", "COM2", "COM3", "COM4"], 75), 0, 1)
+        serial_grid.addWidget(self._make_combo(["COM1", "COM2", "COM3", "COM4"]), 0, 1)
         serial_grid.addWidget(QLabel("波特率:"), 0, 2)
-        serial_grid.addWidget(self._make_combo(["9600", "19200", "38400", "57600", "115200"], 85), 0, 3)
+        serial_grid.addWidget(self._make_combo(["9600", "19200", "38400", "57600", "115200"]), 0, 3)
         serial_grid.addWidget(QLabel("数据位:"), 0, 4)
-        serial_grid.addWidget(self._make_combo(["8", "7", "6", "5"], 55), 0, 5)
+        serial_grid.addWidget(self._make_combo(["8", "7", "6", "5"]), 0, 5)
 
         # 第二行：校验位 | 停止位 | 开启按钮
         serial_grid.addWidget(QLabel("校验位:"), 1, 0)
-        serial_grid.addWidget(self._make_combo(["None", "Odd", "Even", "Mark", "Space"], 75), 1, 1)
+        serial_grid.addWidget(self._make_combo(["None", "Odd", "Even", "Mark", "Space"]), 1, 1)
         serial_grid.addWidget(QLabel("停止位:"), 1, 2)
-        serial_grid.addWidget(self._make_combo(["1", "1.5", "2"], 55), 1, 3)
+        serial_grid.addWidget(self._make_combo(["1", "1.5", "2"]), 1, 3)
 
         serial_btn = QPushButton("开启")
         serial_btn.setStyleSheet("""
@@ -679,7 +695,7 @@ class MainWindow(QMainWindow):
 
         # 协议
         net_grid.addWidget(QLabel("协议:"), 0, 0)
-        proto_combo = self._make_combo(["TCP", "UDP"], 70)
+        proto_combo = self._make_combo(["TCP", "UDP"])
         net_grid.addWidget(proto_combo, 0, 1)
 
         # 地址
