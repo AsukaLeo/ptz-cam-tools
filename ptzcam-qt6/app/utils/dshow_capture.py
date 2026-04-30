@@ -368,15 +368,22 @@ class CaptureThread(QThread):
             self.error_occurred.emit("OpenCV not available")
             return
         
+        logger = get_logger(__name__)
+        
         try:
             # Open capture with DirectShow backend
+            logger.debug(f"Opening device {self._device.index}: {self._device.name}")
             self._cap = cv2.VideoCapture(self._device.index, cv2.CAP_DSHOW)
             
             if not self._cap.isOpened():
+                logger.error(f"Failed to open device {self._device.name}")
                 self.error_occurred.emit(f"Failed to open device {self._device.name}")
                 return
             
+            logger.debug(f"Device opened successfully")
+            
             # Set format
+            logger.debug(f"Setting format: {self._format.width}x{self._format.height} @ {self._format.fps}fps")
             self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self._format.width)
             self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self._format.height)
             self._cap.set(cv2.CAP_PROP_FPS, self._format.fps)
@@ -388,18 +395,26 @@ class CaptureThread(QThread):
                              cv2.VideoWriter_fourcc('H', '2', '6', '4'))
             
             self.state_changed.emit('playing')
+            logger.debug("Capture started, entering loop")
             
             # Capture loop
-            logger = get_logger(__name__)
             frame_count = 0
+            fail_count = 0
             
             while not self._stop_flag:
                 ret, frame = self._cap.read()
                 
                 if not ret:
+                    fail_count += 1
+                    if fail_count == 1:
+                        logger.warning(f"First read failed")
+                    elif fail_count % 30 == 0:
+                        logger.warning(f"Read failed {fail_count} times")
                     continue
                 
+                fail_count = 0  # Reset on success
                 frame_count += 1
+                
                 if frame_count == 1:
                     logger.debug(f"First frame captured: {frame.shape}")
                 elif frame_count % 30 == 0:
