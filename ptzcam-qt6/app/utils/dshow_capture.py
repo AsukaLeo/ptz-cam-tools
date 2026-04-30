@@ -27,9 +27,11 @@ except ImportError:
     print("Warning: OpenCV not available")
 
 
-# Windows API to get device friendly name
+# Windows API to get device friendly name using DirectShow
 def get_device_friendly_name(index: int) -> str:
-    """Get DirectShow device friendly name using Windows SetupAPI.
+    """Get DirectShow device friendly name using Windows COM API.
+    
+    This accesses the DirectShow filter graph to get the actual device name.
     
     Args:
         index: Device index.
@@ -38,32 +40,58 @@ def get_device_friendly_name(index: int) -> str:
         Device friendly name or default name.
     """
     try:
-        import winreg
-        # Try to read from registry
-        try:
-            key_path = r"SYSTEM\CurrentControlSet\Control\Class\{6bdd1fc6-810f-11d0-bec7-08002be2092f}"
-            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
-                # Enumerate subkeys to find camera devices
-                sub_index = 0
-                camera_count = 0
-                while True:
+        # Use comtypes to access DirectShow
+        import comtypes.client
+        from comtypes import GUID
+        
+        # CLSID_SystemDeviceEnum
+        CLSID_SystemDeviceEnum = GUID("{62BE5D10-60EB-11d0-BD3B-00A0C911CE86}")
+        # CLSID_VideoInputDeviceCategory
+        CLSID_VideoInputDeviceCategory = GUID("{860BB310-5D01-11d0-BD3B-00A0C911CE86}")
+        
+        # Create System Device Enumerator
+        dev_enum = comtypes.client.CreateObject(CLSID_SystemDeviceEnum)
+        
+        # Create class enumerator for video input devices
+        class_enum = dev_enum.CreateClassEnumerator(CLSID_VideoInputDeviceCategory, 0)
+        
+        if class_enum is None:
+            return f"Camera {index + 1}"
+        
+        # Enumerate devices
+        device_count = 0
+        while True:
+            try:
+                # Get next moniker
+                moniker = class_enum.Next(1)
+                if not moniker:
+                    break
+                
+                if device_count == index:
+                    # Get property bag to read friendly name
+                    bind_ctx = comtypes.client.CreateObject(comtypes.CLSID_BindCtx)
+                    property_bag = moniker[0].BindToStorage(bind_ctx, None, comtypes.GUID("{55272A00-42CB-11CE-8135-00AA004BB851}"))
+                    
+                    # Read FriendlyName property
                     try:
-                        subkey_name = winreg.EnumKey(key, sub_index)
-                        with winreg.OpenKey(key, subkey_name) as subkey:
-                            try:
-                                friendly_name, _ = winreg.QueryValueEx(subkey, "FriendlyName")
-                                if camera_count == index:
-                                    return friendly_name
-                                camera_count += 1
-                            except FileNotFoundError:
-                                pass
-                        sub_index += 1
-                    except OSError:
-                        break
-        except Exception:
-            pass
+                        import ctypes
+                        variant = ctypes.c_void_p()
+                        property_bag.Read("FriendlyName", ctypes.byref(variant), None)
+                        # Convert BSTR to string
+                        if variant:
+                            friendly_name = ctypes.wstring_at(variant)
+                            return friendly_name
+                    except:
+                        pass
+                
+                device_count += 1
+            except Exception:
+                break
+        
     except ImportError:
         pass
+    except Exception as e:
+        print(f"Error getting device name: {e}")
     
     # Fallback: return default name
     return f"Camera {index + 1}"
@@ -171,11 +199,15 @@ class DirectShowCapture(QObject):
                 if not cap.isOpened():
                     break
                 
-                # Get device name - prefer Qt name, fallback to Windows API
+                # Get device name - prefer Qt name, fallback to Windows API, then to default
+                name = f"Camera {index + 1}"
                 if qt_device_names and index in qt_device_names:
                     name = qt_device_names[index]
                 else:
-                    name = get_device_friendly_name(index)
+                    # Try Windows API for virtual cameras
+                    api_name = get_device_friendly_name(index)
+                    if api_name != name:  # If API returned something different
+                        name = api_name
                 
                 # Enumerate supported formats
                 formats = DirectShowCapture._enumerate_formats(cap)
