@@ -1,0 +1,8 @@
+2026-04-30 16:15:51 [INFO] ptzcam: Logging to file: C:\Users\asuka\WorkBuddy\20260429153616\ptzcam-qt6\logs\ptzcam_20260430_161551.log
+2026-04-30 16:15:51 [INFO] ptzcam: Logging level: INFO
+2026-04-30 16:15:51 [INFO] ptzcam.main: ==================================================
+2026-04-30 16:15:51 [INFO] ptzcam.main: PTZ-Cam-Tools Starting...
+2026-04-30 16:15:51 [INFO] ptzcam.main: Debug mode: False
+2026-04-30 16:15:51 [INFO] ptzcam.main: ==================================================
+2026-04-30 16:15:51 [INFO] ptzcam.main: Main window displayed
+2026-04-30 16:15:51 [INFO] ptzcam.main: Entering event loop...
