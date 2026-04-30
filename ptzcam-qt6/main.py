@@ -3,7 +3,7 @@ import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGridLayout, QLabel, QPushButton, QComboBox, QLineEdit, QTabWidget,
-    QFrame, QStatusBar, QListWidget, QSizeGrip
+    QFrame, QStatusBar, QSizeGrip, QRadioButton
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QResizeEvent, QPainterPath, QRegion
@@ -19,8 +19,7 @@ MIN_HEIGHT = 500
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        # 只禁用最大化，不影响最小化和关闭按钮
-        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
+        # 恢复最大化按钮功能
         self.setWindowTitle("PTZ-Cam-Tools")
 
         # 在 setup_ui 之前初始化
@@ -28,9 +27,10 @@ class MainWindow(QMainWindow):
         self._preview_resolution = None
         self._resizing = False
 
-        # 最小尺寸 & 默认 16:10
+        # 最小尺寸 & 默认尺寸（高度适配510px预览区 + 其他控件）
         self.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
-        self.resize(960, 600)
+        # 默认窗口高度 = 预览区510 + Tab/卡片约160 + PTZ约120 + 边距
+        self.resize(960, 850)
 
         self.setup_ui()
 
@@ -100,15 +100,13 @@ class MainWindow(QMainWindow):
         self.create_ptz_panel(main_layout)
 
         # Status bar
-        self.status_label = QLabel("状态: 就绪")
+        self.status_label = QLabel("  状态: 就绪")
         self.statusBar().addWidget(self.status_label)
 
-        # 版本署名放到右下角
-        self.version_label = QLabel("V 0.8.430_1fcae1a By Asuka")
+        # 版本署名放到右下角（去掉SizeGrip，避免空白区域）
+        self.version_label = QLabel("V 0.8.430_3eb6da0 By Asuka  ")
         self.version_label.setStyleSheet("color: #999; font-size: 11px; background: transparent;")
         self.statusBar().addPermanentWidget(self.version_label)
-
-        self.statusBar().addPermanentWidget(QSizeGrip(self))
 
     def create_tab_widget(self, parent_layout):
         self.tab_widget = QTabWidget()
@@ -124,9 +122,10 @@ class MainWindow(QMainWindow):
 
     def _create_preview(self):
         """创建视频预览区 — 黑色背景填充，内部视频层保持 16:9"""
-        # 外层容器：黑色背景，填充可用空间
+        # 外层容器：黑色背景，默认高度510px，可随窗口缩放
         container = QFrame()
         container.setObjectName("previewContainer")
+        container.setMinimumHeight(200)
         container.setStyleSheet("""
             QFrame#previewContainer {
                 background-color: #1a1a1a;
@@ -443,30 +442,6 @@ class MainWindow(QMainWindow):
         lang_row.addWidget(self._make_combo(["中文", "English"]))
         lang_row.addStretch()
         layout.addLayout(lang_row)
-
-        net_title = QLabel("网络设置")
-        net_title.setStyleSheet("font-weight: 500; border-bottom: 1px solid #eee; padding-bottom: 4px; background: transparent;")
-        layout.addWidget(net_title)
-
-        net_item_row = QHBoxLayout()
-        net_item_row.setSpacing(12)
-        avail_label = QLabel("可用网卡:")
-        avail_label.setFixedWidth(100)
-        net_item_row.addWidget(avail_label)
-
-        device_list = QListWidget()
-        device_list.setFixedHeight(80)
-        device_list.addItem("✓ Realtek PCIe GbE - 192.168.1.100")
-        device_list.addItem("  Intel Wi-Fi 6 - 192.168.1.101")
-        device_list.addItem("  VirtualBox Host-Only - 192.168.56.1")
-        device_list.setStyleSheet("""
-            QListWidget {
-                border: 1px solid #aaa; border-radius: 6px;
-                background: #fafafa; font-size: 12px; color: #555;
-            }
-        """)
-        net_item_row.addWidget(device_list, 1)
-        layout.addLayout(net_item_row)
         layout.addStretch()
 
         return page
@@ -601,10 +576,157 @@ class MainWindow(QMainWindow):
         hs.addWidget(wide_btn("Stop", lambda: self.update_status("PTZ 停止")))
         controls_layout.addLayout(hs)
 
+        # VISCA 控制区域
+        visca_widget = self._create_visca_control()
+        controls_layout.addWidget(visca_widget)
+
         controls_layout.addStretch()
         layout.addLayout(controls_layout)
         parent_layout.addWidget(ptz_panel)
         self._ptz_panel = ptz_panel
+
+    def _create_visca_control(self):
+        """创建 VISCA 控制区域（串口 + 网络）"""
+        visca_frame = QFrame()
+        visca_frame.setObjectName("viscaFrame")
+        visca_frame.setStyleSheet("""
+            QFrame#viscaFrame {
+                background-color: #f0f2f5;
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+            }
+        """)
+        visca_layout = QVBoxLayout(visca_frame)
+        visca_layout.setContentsMargins(10, 10, 10, 10)
+        visca_layout.setSpacing(6)
+
+        # VISCA 标题
+        visca_title = QLabel("VISCA 控制")
+        visca_title.setStyleSheet("font-size: 12px; font-weight: 500; color: #555; background: transparent;")
+        visca_layout.addWidget(visca_title)
+
+        # Tab 切换：串口 / 网络
+        visca_tab = QTabWidget()
+        visca_tab.setDocumentMode(True)
+        visca_tab.setStyleSheet("""
+            QTabWidget::pane { border: none; }
+            QTabBar::tab {
+                background-color: #e0e0e0; color: #666;
+                padding: 4px 12px; border: 1px solid #ccc;
+                border-top-left-radius: 4px; border-top-right-radius: 4px;
+            }
+            QTabBar::tab:selected {
+                background-color: #fff; color: #333;
+                border-bottom-color: #fff;
+            }
+        """)
+
+        # 串口 Tab
+        serial_page = QWidget()
+        serial_layout = QVBoxLayout(serial_page)
+        serial_layout.setContentsMargins(8, 8, 8, 8)
+        serial_layout.setSpacing(6)
+
+        # 端口
+        port_row = QHBoxLayout()
+        port_row.addWidget(QLabel("端口:"))
+        port_combo = self._make_combo(["COM1", "COM2", "COM3", "COM4"])
+        port_row.addWidget(port_combo)
+        serial_layout.addLayout(port_row)
+
+        # 波特率
+        baud_row = QHBoxLayout()
+        baud_row.addWidget(QLabel("波特率:"))
+        baud_combo = self._make_combo(["9600", "19200", "38400", "57600", "115200"])
+        baud_row.addWidget(baud_combo)
+        serial_layout.addLayout(baud_row)
+
+        # 数据位
+        data_row = QHBoxLayout()
+        data_row.addWidget(QLabel("数据位:"))
+        data_combo = self._make_combo(["8", "7", "6", "5"])
+        data_row.addWidget(data_combo)
+        serial_layout.addLayout(data_row)
+
+        # 校验位
+        parity_row = QHBoxLayout()
+        parity_row.addWidget(QLabel("校验位:"))
+        parity_combo = self._make_combo(["None", "Odd", "Even", "Mark", "Space"])
+        parity_row.addWidget(parity_combo)
+        serial_layout.addLayout(parity_row)
+
+        # 停止位
+        stop_row = QHBoxLayout()
+        stop_row.addWidget(QLabel("停止位:"))
+        stop_combo = self._make_combo(["1", "1.5", "2"])
+        stop_row.addWidget(stop_combo)
+        serial_layout.addLayout(stop_row)
+
+        # 开启按钮
+        serial_btn = QPushButton("开启")
+        serial_btn.setStyleSheet("""
+            QPushButton {
+                background: #0078d4; color: #fff; border: none; border-radius: 4px;
+                padding: 4px 16px; font-size: 12px;
+            }
+            QPushButton:hover { background: #0066b8; }
+        """)
+        serial_btn.clicked.connect(lambda: self.update_status("VISCA 串口已开启"))
+        serial_layout.addWidget(serial_btn)
+        serial_layout.addStretch()
+
+        visca_tab.addTab(serial_page, "串口")
+
+        # 网络 Tab
+        net_page = QWidget()
+        net_layout = QVBoxLayout(net_page)
+        net_layout.setContentsMargins(8, 8, 8, 8)
+        net_layout.setSpacing(6)
+
+        # 协议选择
+        proto_row = QHBoxLayout()
+        proto_row.addWidget(QLabel("协议:"))
+        tcp_rb = QRadioButton("TCP")
+        tcp_rb.setChecked(True)
+        udp_rb = QRadioButton("UDP")
+        proto_row.addWidget(tcp_rb)
+        proto_row.addWidget(udp_rb)
+        proto_row.addStretch()
+        net_layout.addLayout(proto_row)
+
+        # 地址
+        addr_row = QHBoxLayout()
+        addr_row.addWidget(QLabel("地址:"))
+        addr_edit = QLineEdit("192.168.50.254")
+        addr_edit.setFixedWidth(120)
+        addr_row.addWidget(addr_edit)
+        net_layout.addLayout(addr_row)
+
+        # 端口
+        port2_row = QHBoxLayout()
+        port2_row.addWidget(QLabel("端口:"))
+        port2_edit = QLineEdit("5678")
+        port2_edit.setFixedWidth(60)
+        port2_row.addWidget(port2_edit)
+        net_layout.addLayout(port2_row)
+
+        # 连接按钮
+        net_btn = QPushButton("连接")
+        net_btn.setStyleSheet("""
+            QPushButton {
+                background: #0078d4; color: #fff; border: none; border-radius: 4px;
+                padding: 4px 16px; font-size: 12px;
+            }
+            QPushButton:hover { background: #0066b8; }
+        """)
+        net_btn.clicked.connect(lambda: self.update_status("VISCA 网络已连接"))
+        net_layout.addWidget(net_btn)
+        net_layout.addStretch()
+
+        visca_tab.addTab(net_page, "网络")
+        visca_layout.addWidget(visca_tab)
+
+        return visca_frame
 
     # ── Tab 切换 / 状态 ────────────────────────────────────────
     def on_tab_changed(self, index):
