@@ -4,4 +4,7 @@
 # Core UI Framework
 PySide6>=6.11.0
 
+# Video Capture
+opencv-python>=4.8.0
+
 # Logging (stdlib only, no external deps required)

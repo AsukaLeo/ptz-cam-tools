@@ -1,0 +1,29 @@
+2026-04-30 19:07:47 [INFO] ptzcam: Logging to file: C:\Users\asuka\WorkBuddy\20260429153616\ptzcam-qt6\logs\ptzcam_20260430_190747.log
+2026-04-30 19:07:47 [INFO] ptzcam: Logging level: DEBUG
+2026-04-30 19:07:47 [INFO] ptzcam.main: ==================================================
+2026-04-30 19:07:47 [INFO] ptzcam.main: PTZ-Cam-Tools Starting...
+2026-04-30 19:07:47 [INFO] ptzcam.main: Debug mode: True
+2026-04-30 19:07:47 [INFO] ptzcam.main: ==================================================
+2026-04-30 19:07:47 [DEBUG] ptzcam.main: DPI policy configured
+2026-04-30 19:07:47 [DEBUG] ptzcam.main: QApplication created
+2026-04-30 19:07:47 [DEBUG] ptzcam.main: Stylesheet applied
+2026-04-30 19:07:47 [DEBUG] ptzcam.app.main_window: Window size: 960x850
+2026-04-30 19:07:47 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices via DirectShow...
+2026-04-30 19:07:47 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected
+2026-04-30 19:07:47 [DEBUG] ptzcam.app.main_window: Created 5 tabs
+2026-04-30 19:07:47 [DEBUG] ptzcam.app.main_window: Created 4 preview widgets
+2026-04-30 19:07:47 [DEBUG] ptzcam.app.main_window: Main window UI setup complete
+2026-04-30 19:07:48 [INFO] ptzcam.main: Main window displayed
+2026-04-30 19:07:48 [INFO] ptzcam.main: Entering event loop...
+2026-04-30 19:07:53 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices via DirectShow...
+2026-04-30 19:07:53 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 19:07:53 [DEBUG] ptzcam.app.main_window: Status updated: 未检测到 USB 摄像头
+2026-04-30 19:07:53 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected
+2026-04-30 19:07:54 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices via DirectShow...
+2026-04-30 19:07:54 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 19:07:54 [DEBUG] ptzcam.app.main_window: Status updated: 未检测到 USB 摄像头
+2026-04-30 19:07:54 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected
+2026-04-30 19:07:55 [DEBUG] ptzcam.app.tabs.usb_tab: Enumerating USB devices via DirectShow...
+2026-04-30 19:07:55 [DEBUG] ptzcam.app.main_window: Status updated: 正在检测设备...
+2026-04-30 19:07:55 [DEBUG] ptzcam.app.main_window: Status updated: 未检测到 USB 摄像头
+2026-04-30 19:07:55 [WARNING] ptzcam.app.tabs.usb_tab: No USB camera devices detected

@@ -186,9 +186,14 @@ class USBTab(QWidget):
         self.fps_combo.clear()
         self.play_btn.setEnabled(False)
         
-        # Enumerate devices using DirectShow (for H264 support)
+        # First get Qt device names (which have real friendly names)
+        qt_devices = self._device_manager.enumerate_devices()
+        qt_names = {i: d.name for i, d in enumerate(qt_devices)}
+        self._logger.debug(f"Qt enumeration found {len(qt_names)} device(s)")
+        
+        # Enumerate devices using DirectShow with Qt names
         self._logger.debug("Calling DirectShowCapture.enumerate_devices()...")
-        self._dshow_devices = DirectShowCapture.enumerate_devices()
+        self._dshow_devices = DirectShowCapture.enumerate_devices(qt_names)
         self._logger.debug(f"DirectShow returned {len(self._dshow_devices)} device(s)")
         
         if not self._dshow_devices:
@@ -388,12 +393,21 @@ class USBTab(QWidget):
     
     def _stop_playback(self) -> None:
         """Stop video playback."""
+        # Prevent multiple calls
+        if self.play_btn.text() == "播放":
+            return
+        
         self._logger.info("Stopping playback")
         self._notify_status("视频已停止")
         
-        # Stop capture
-        self._dshow_capture.stop_capture()
+        # Only stop if running
+        if self._dshow_capture.is_running():
+            self._dshow_capture.stop_capture()
         
+        self._update_ui_stopped()
+    
+    def _update_ui_stopped(self) -> None:
+        """Update UI to stopped state (without calling stop_capture)."""
         # Show placeholder
         if hasattr(self.preview_widget, 'show_placeholder'):
             self.preview_widget.show_placeholder()
@@ -443,8 +457,10 @@ class USBTab(QWidget):
             state: New state ('playing', 'stopped').
         """
         self._logger.debug(f"Capture state: {state}")
-        if state == 'stopped':
-            self._stop_playback()
+        # Only update UI if state changed externally
+        if state == 'stopped' and self.play_btn.text() == "停止":
+            # Playback stopped externally, update UI only
+            self._update_ui_stopped()
     
     def _on_device_added(self, device) -> None:
         """Handle device added event (from Qt device manager).

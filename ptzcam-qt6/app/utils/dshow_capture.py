@@ -146,8 +146,11 @@ class DirectShowCapture(QObject):
         self._is_running = False
     
     @staticmethod
-    def enumerate_devices() -> List[DShowDevice]:
+    def enumerate_devices(qt_device_names: dict = None) -> List[DShowDevice]:
         """Enumerate DirectShow video capture devices.
+        
+        Args:
+            qt_device_names: Optional dict mapping index to device name from Qt.
         
         Returns:
             List of available capture devices with formats.
@@ -166,8 +169,11 @@ class DirectShowCapture(QObject):
                 if not cap.isOpened():
                     break
                 
-                # Get device name using Windows API
-                name = get_device_friendly_name(index)
+                # Get device name - prefer Qt name, fallback to Windows API
+                if qt_device_names and index in qt_device_names:
+                    name = qt_device_names[index]
+                else:
+                    name = get_device_friendly_name(index)
                 
                 # Enumerate supported formats
                 formats = DirectShowCapture._enumerate_formats(cap)
