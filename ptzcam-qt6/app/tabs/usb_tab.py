@@ -189,18 +189,23 @@ class USBTab(QWidget):
         # First get Qt device names (which have real friendly names)
         qt_devices = self._device_manager.enumerate_devices()
         qt_names = {i: d.name for i, d in enumerate(qt_devices)}
-        self._logger.debug(f"Qt enumeration found {len(qt_names)} device(s)")
+        self._logger.debug(f"Qt enumeration found {len(qt_names)} device(s):")
+        for i, name in qt_names.items():
+            self._logger.debug(f"  Qt[{i}]: {name}")
         
         # Enumerate devices using DirectShow
         self._logger.debug("Calling DirectShowCapture.enumerate_devices()...")
         self._dshow_devices = DirectShowCapture.enumerate_devices()
-        self._logger.debug(f"DirectShow returned {len(self._dshow_devices)} device(s)")
+        self._logger.debug(f"DirectShow returned {len(self._dshow_devices)} device(s):")
+        for i, d in enumerate(self._dshow_devices):
+            self._logger.debug(f"  DShow[{i}]: {d.name}")
         
         # Map Qt names to DirectShow devices by index
         for i, device in enumerate(self._dshow_devices):
             if i in qt_names:
+                old_name = device.name
                 device.name = qt_names[i]
-                self._logger.debug(f"Mapped device {i}: {device.name}")
+                self._logger.debug(f"Mapped DShow[{i}]: '{old_name}' -> '{device.name}'")
         
         if not self._dshow_devices:
             self.device_combo.addItem("未检测到设备", -1)
