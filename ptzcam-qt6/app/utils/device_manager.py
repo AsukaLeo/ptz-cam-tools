@@ -14,6 +14,10 @@ from PySide6.QtMultimedia import (
     QCamera
 )
 
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class PixelFormat(Enum):
     """Camera pixel format mapping."""
@@ -132,30 +136,30 @@ class DeviceManager(QObject):
         
         try:
             qdevices = self._media_devices.videoInputs()
-            print(f"[DEBUG] enumerate_devices: found {len(qdevices)} raw device(s)")
+            logger.debug("enumerate_devices: found %d raw device(s)", len(qdevices))
             
             for i, qdevice in enumerate(qdevices):
-                print(f"[DEBUG] Processing device {i+1}: {qdevice.description()}")
+                logger.debug("Processing device %d: %s", i + 1, qdevice.description())
                 try:
                     device = self._convert_device(qdevice)
                     if device:
                         devices.append(device)
                         self._devices[device.id] = device
-                        print(f"[DEBUG] Device {i+1} converted successfully")
+                        logger.debug("Device %d converted successfully", i + 1)
                     else:
-                        print(f"[DEBUG] Device {i+1} conversion returned None")
+                        logger.debug("Device %d conversion returned None", i + 1)
                 except Exception as e:
-                    print(f"[DEBUG] Device {i+1} conversion error: {e}")
+                    logger.debug("Device %d conversion error: %s", i + 1, e)
                     import traceback
                     traceback.print_exc()
         
         except Exception as e:
-            print(f"[DEBUG] enumerate_devices error: {e}")
+            logger.debug("enumerate_devices error: %s", e)
             import traceback
             traceback.print_exc()
             self.error_occurred.emit(f"Failed to enumerate devices: {e}")
         
-        print(f"[DEBUG] enumerate_devices returning {len(devices)} device(s)")
+        logger.debug("enumerate_devices returning %d device(s)", len(devices))
         return devices
     
     def get_device(self, device_id: str) -> Optional[CameraDevice]:
@@ -215,21 +219,21 @@ class DeviceManager(QObject):
         try:
             # Fix: device ID is QByteArray, convert to string
             device_id_raw = qdevice.id()
-            print(f"[DEBUG] Device ID type: {type(device_id_raw)}, value: {repr(device_id_raw)[:80]}")
+            logger.debug("Device ID type: %s, value: %s", type(device_id_raw).__name__, repr(device_id_raw)[:80])
             
             try:
                 # Method 1: QByteArray to bytes then decode
                 device_bytes = bytes(device_id_raw)
                 device_id = device_bytes.decode('utf-8', errors='ignore')
-                print(f"[DEBUG] ID converted via bytes(): {device_id[:50]}...")
+                logger.debug("ID converted via bytes(): %s...", device_id[:50])
             except Exception as e1:
-                print(f"[DEBUG] bytes() method failed: {e1}")
+                logger.debug("bytes() method failed: %s", e1)
                 try:
                     # Method 2: Direct str conversion
                     device_id = str(device_id_raw)
-                    print(f"[DEBUG] ID converted via str(): {device_id[:50]}...")
+                    logger.debug("ID converted via str(): %s...", device_id[:50])
                 except Exception as e2:
-                    print(f"[DEBUG] str() method failed: {e2}")
+                    logger.debug("str() method failed: %s", e2)
                     device_id = f"device_{id(qdevice)}"  # Fallback
             
             # Get basic info (always available)
@@ -244,7 +248,7 @@ class DeviceManager(QObject):
                 }
                 position = position_map.get(qdevice.position(), "Unspecified")
             except Exception as e:
-                print(f"[DEBUG] Position mapping error: {e}")
+                logger.debug("Position mapping error: %s", e)
                 position = "Unspecified"
             
             # Get photo resolutions (may be empty)

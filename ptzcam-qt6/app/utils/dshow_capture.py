@@ -16,6 +16,8 @@ from PySide6.QtGui import QImage
 
 from app.utils.logger import get_logger
 
+_logger = get_logger(__name__)
+
 
 # Import OpenCV
 try:
@@ -91,7 +93,7 @@ def get_device_friendly_name(index: int) -> str:
     except ImportError:
         pass
     except Exception as e:
-        print(f"Error getting device name: {e}")
+        _logger.warning("Error getting device name: %s", e)
     
     # Fallback: return default name
     return f"Camera {index + 1}"
@@ -186,7 +188,7 @@ class DirectShowCapture(QObject):
             List of available capture devices with formats.
         """
         if not _HAS_CV2 or cv2 is None:
-            print("OpenCV not available")
+            _logger.error("OpenCV not available")
             return []
         
         devices = []
@@ -221,7 +223,7 @@ class DirectShowCapture(QObject):
                 devices.append(device)
                 
             except Exception as e:
-                print(f"Error enumerating device {index}: {e}")
+                _logger.error("Error enumerating device %d: %s", index, e)
                 break
             finally:
                 if cap:
