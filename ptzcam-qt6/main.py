@@ -38,8 +38,29 @@ def _setup_bundled_paths() -> None:
     os.environ['PATH'] = meipass + os.pathsep + os.environ['PATH']
 
 
+def _setup_zeep_cache() -> None:
+    """Pre-configure zeep WSDL cache for PyInstaller frozen builds.
+
+    onvif-zeep downloads WSDL files at runtime via the zeep SOAP library.
+    Zeep's default SQLite cache may fail in a frozen EXE due to path
+    issues. Ensure the cache dir exists in a writable user location.
+    """
+    if not getattr(sys, 'frozen', False):
+        return
+
+    cache_base = os.path.join(
+        os.environ.get('LOCALAPPDATA',
+                       os.environ.get('APPDATA',
+                                      os.path.expanduser('~'))),
+        'zeep',
+    )
+    os.makedirs(os.path.join(cache_base, 'Cache'), exist_ok=True)
+    os.environ['ZEEP_CACHE_DIR'] = cache_base
+
+
 # Run at module load time, before any OpenCV/FFmpeg imports
 _setup_bundled_paths()
+_setup_zeep_cache()
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
