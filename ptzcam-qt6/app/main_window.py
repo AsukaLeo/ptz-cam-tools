@@ -83,6 +83,7 @@ class MainWindow(QMainWindow):
         
         # Create tab pages
         self._usb_tab = USBTab()
+        self._usb_tab.set_video_info_callback(self.update_video_info)
         self._rtsp_tab = RTSPTab()
         self._ndi_tab = NDITab()
         self._onvif_tab = ONVIFTab()
@@ -169,6 +170,13 @@ class MainWindow(QMainWindow):
         self.status_label = QLabel(f"  状态: {STATUS_READY}")
         self.statusBar().addWidget(self.status_label)
         
+        # Video info label (center)
+        self.video_info_label = QLabel("")
+        self.video_info_label.setStyleSheet(
+            "color: #666; font-size: 11px; background: transparent;"
+        )
+        self.statusBar().addWidget(self.video_info_label)
+        
         # Version label (right)
         self.version_label = QLabel(f"{VERSION_STRING}  ")
         self.version_label.setStyleSheet(
@@ -228,6 +236,20 @@ class MainWindow(QMainWindow):
         """
         self._logger.debug(f"Status updated: {text}")
         self.status_label.setText(f"状态: {text}")
+    
+    def update_video_info(self, width: int, height: int,
+                          format_name: str, fps: float) -> None:
+        """Update video info display in status bar.
+        
+        Args:
+            width: Video frame width.
+            height: Video frame height.
+            format_name: Pixel format name.
+            fps: Current frame rate.
+        """
+        self.video_info_label.setText(
+            f"  {width}×{height}  |  {format_name}  |  {fps:.1f} fps  "
+        )
     
     def sizeHint(self) -> QSize:
         """Provide recommended window size.

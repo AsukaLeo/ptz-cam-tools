@@ -59,6 +59,8 @@ class USBTab(QWidget):
         
         self._current_device: Optional[DShowDevice] = None
         self._dshow_devices: list[DShowDevice] = []
+        self._on_video_info: Optional[Callable[[int, int, str, float], None]] = None
+        self._frame_times: list[float] = []  # For real-time FPS calculation
         
         self._setup_ui()
         self._enumerate_devices()
@@ -451,7 +453,30 @@ class USBTab(QWidget):
         """
         self._logger.debug(f"Frame received: {image.width()}x{image.height()}")
         
+        # Calculate real-time FPS (sliding window of frame timestamps)
+        import time
+        now = time.time()
+        self._frame_times.append(now)
+        # Keep only last 30 frame timestamps
+        if len(self._frame_times) > 30:
+            self._frame_times.pop(0)
+        
+        real_fps = 0.0
+        if len(self._frame_times) >= 2:
+            elapsed = self._frame_times[-1] - self._frame_times[0]
+            if elapsed > 0:
+                real_fps = (len(self._frame_times) - 1) / elapsed
+        
+        # Report video info (every 10th frame to reduce UI updates)
+        if self._on_video_info and len(self._frame_times) % 10 == 0:
+            fmt_name = self.fmt_combo.currentText() if self.fmt_combo.count() > 0 else ""
+            self._on_video_info(image.width(), image.height(), fmt_name, real_fps)
+        
         if not self.preview_widget:
+            self._logger.warning("No preview widget available")
+            return
+        
+        if not hasattr(self.preview_widget, 'set_video_frame'):
             self._logger.warning("No preview widget available")
             return
         
@@ -557,6 +582,14 @@ class USBTab(QWidget):
             callback: Function to call when status needs updating.
         """
         self.on_status_update = callback
+    
+    def set_video_info_callback(self, callback: Callable[[int, int, str, float], None]) -> None:
+        """Set callback for video frame info updates.
+        
+        Args:
+            callback: Function taking (width, height, format_name, fps).
+        """
+        self._on_video_info = callback
     
     def get_current_device(self) -> Optional[CameraDevice]:
         """Get currently selected device.
