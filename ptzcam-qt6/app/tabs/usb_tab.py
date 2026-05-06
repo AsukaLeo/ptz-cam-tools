@@ -9,10 +9,10 @@ from PySide6.QtGui import QImage
 from typing import Optional, Callable
 
 from app.styles.theme import get_control_card_style, get_primary_button_style, get_standard_button_style
-from app.utils.device_manager import DeviceManager
+from app.utils.device_manager import DeviceManager, CameraDevice
 from app.utils.dshow_capture import (
     DirectShowCapture, DShowDevice, DShowFormat,
-    enumerate_devices_fast
+    build_dshow_device_from_qt, FOURCC_H264
 )
 from app.utils.logger import get_logger
 
@@ -181,8 +181,8 @@ class USBTab(QWidget):
         self.preview_widget = widget
     
     def _enumerate_devices(self) -> None:
-        """Enumerate USB camera devices using DirectShow and update UI."""
-        self._logger.debug("Enumerating USB devices (fast path)...")
+        """Enumerate USB camera devices using QtMultimedia (no OpenCV at enum time)."""
+        self._logger.debug("Enumerating USB camera devices...")
         self._notify_status("正在检测设备...")
         
         # Clear current list
@@ -192,80 +192,35 @@ class USBTab(QWidget):
         self.fps_combo.clear()
         self.play_btn.setEnabled(False)
         
-        # Get Qt devices (physical cameras with correct names)
+        # Qt enumeration only (no OpenCV to avoid DShow driver state corruption)
         qt_devices = self._device_manager.enumerate_devices()
-        self._logger.debug(f"Qt enumeration found {len(qt_devices)} device(s):")
-        for i, d in enumerate(qt_devices):
-            self._logger.debug(f"  Qt[{i}]: {d.name}")
+        self._logger.debug(f"Qt found {len(qt_devices)} physical camera(s)")
         
-        # Build Qt format data
-        qt_device_names = {}
-        qt_formats_by_index = {}
+        # Convert Qt devices to DShowDevices using their format data
+        self._dshow_devices = []
         for i, qt_dev in enumerate(qt_devices):
-            qt_device_names[i] = qt_dev.name
-            fmt_list = []
-            for qfmt in qt_dev.video_formats:
-                w, h = qfmt.resolution
-                fmt_list.append((w, h, qfmt.pixel_format, int(qfmt.max_fps)))
-            qt_formats_by_index[i] = fmt_list
-        
-        # Fast path: use enumerate_devices_fast (no OpenCV probing)
-        dshow_devices = enumerate_devices_fast(
-            qt_device_names=qt_device_names,
-            qt_formats_by_index=qt_formats_by_index
-        )
-        self._logger.debug(f"Fast enumeration returned {len(dshow_devices)} device(s)")
-        if not dshow_devices:
-            # Fallback: try original enumeration
-            self._logger.debug("Fast enumeration empty, trying Qt-only fallback")
-            qt_devices_list = []
-            for i, qt_dev in enumerate(qt_devices):
-                formats_list = []
-                for qfmt in qt_dev.video_formats:
-                    w, h = qfmt.resolution
-                    # Map Qt pixel format
-                    from app.utils.device_manager import PixelFormat
-                    formats_list.append(DShowFormat(
-                        width=w, height=h, fps=float(qfmt.max_fps),
-                        format_type=qfmt.pixel_format, media_subtype=0
-                    ))
-                    for alt_fps in [60, 50, 30, 25, 15, 10, 5]:
-                        if int(qfmt.max_fps) != alt_fps and alt_fps < int(qfmt.max_fps):
-                            formats_list.append(DShowFormat(
-                                width=w, height=h, fps=float(alt_fps),
-                                format_type=qfmt.pixel_format, media_subtype=0
-                            ))
-                device = DShowDevice(
-                    index=i, name=qt_dev.name,
-                    device_path=f"video={i}",
-                    formats=formats_list
+            dshow_dev = build_dshow_device_from_qt(qt_dev, physical_index=i)
+            if dshow_dev and dshow_dev.formats:
+                self._dshow_devices.append(dshow_dev)
+                self._logger.debug(
+                    f"  Device {i}: {qt_dev.name} ({len(dshow_dev.formats)} format entries)"
                 )
-                qt_devices_list.append(device)
-            dshow_devices = qt_devices_list
-        
-        self._dshow_devices = dshow_devices
         
         if not self._dshow_devices:
             self.device_combo.addItem("未检测到设备", -1)
             self._notify_status("未检测到 USB 摄像头")
-            self._logger.warning("No USB camera devices detected")
             return
         
         # Populate device combo
         for i, device in enumerate(self._dshow_devices):
-            display_text = device.name
-            self.device_combo.addItem(display_text, i)
-            self._logger.debug(f"Found device: {device.name} ({len(device.formats)} formats)")
+            self.device_combo.addItem(device.name, i)
         
-        # Connect device selection
+        # Connect and select first
         self.device_combo.currentIndexChanged.connect(self._on_device_selected)
-        
-        # Select first device
         self.device_combo.setCurrentIndex(0)
         self._on_device_selected(0)
         
         self._notify_status(f"检测到 {len(self._dshow_devices)} 个设备")
-        self._logger.info(f"Detected {len(self._dshow_devices)} USB camera(s)")
     
     def _on_device_selected(self, index: int) -> None:
         """Handle device selection change.
@@ -339,34 +294,37 @@ class USBTab(QWidget):
         self.fmt_combo.clear()
         self.fps_combo.clear()
         
-        from app.utils.dshow_capture import STANDARD_FPS
-        
         formats = self._formats_by_resolution.get(resolution, [])
         if not formats:
             return
         
-        # Collect unique format types
-        format_types = set()
+        # Collect unique format types and their available FPS values
+        format_fps_map = {}  # format_type -> set of fps values
         for fmt in formats:
-            format_types.add(fmt.format_type)
+            if fmt.format_type not in format_fps_map:
+                format_fps_map[fmt.format_type] = set()
+            format_fps_map[fmt.format_type].add(int(fmt.fps))
         
         # Add formats (prioritize H264 > MJPG > YUYV > others)
         format_priority = {"H264": 0, "MJPG": 1, "MJPEG": 1, "YUYV": 2, "YUY2": 2, "NV12": 3}
         sorted_formats = sorted(
-            format_types,
+            format_fps_map.keys(),
             key=lambda x: format_priority.get(x.upper(), 99)
         )
         
         for fmt in sorted_formats:
             self.fmt_combo.addItem(fmt)
         
-        # Always offer all standard FPS values
-        for fps in sorted(STANDARD_FPS, reverse=True):
-            self.fps_combo.addItem(f"{fps} fps")
+        # Show FPS values for the first (best) format
+        if sorted_formats:
+            first_fmt = sorted_formats[0]
+            fps_values = sorted(format_fps_map[first_fmt], reverse=True)
+            for fps in fps_values:
+                self.fps_combo.addItem(f"{fps} fps")
         
         # Enable combos
         self.fmt_combo.setEnabled(bool(sorted_formats))
-        self.fps_combo.setEnabled(True)
+        self.fps_combo.setEnabled(bool(sorted_formats))
     
     def _on_resolution_changed(self, index: int) -> None:
         """Handle resolution selection change.
