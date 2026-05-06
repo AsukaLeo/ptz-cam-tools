@@ -238,7 +238,8 @@ class MainWindow(QMainWindow):
         self.status_label.setText(f"状态: {text}")
     
     def update_video_info(self, width: int, height: int,
-                          format_name: str, fps: float) -> None:
+                          format_name: str, fps: float,
+                          latency_ms: int = 0) -> None:
         """Update video info display in status bar.
         
         Args:
@@ -246,9 +247,10 @@ class MainWindow(QMainWindow):
             height: Video frame height.
             format_name: Pixel format name.
             fps: Current frame rate.
+            latency_ms: Capture-to-display latency in ms.
         """
         self.video_info_label.setText(
-            f"  {width}×{height}  |  {format_name}  |  {fps:.1f} fps  "
+            f"  {width}×{height}  |  {format_name}  |  {fps:.1f} fps  |  {latency_ms}ms  "
         )
     
     def sizeHint(self) -> QSize:

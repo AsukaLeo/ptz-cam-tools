@@ -166,7 +166,7 @@ class DirectShowCapture(QObject):
     broader format support including H264.
     """
     
-    frame_ready = Signal(QImage)
+    frame_ready = Signal(QImage, float)  # (image, capture_time)
     error_occurred = Signal(str)
     state_changed = Signal(str)  # 'stopped', 'playing', 'paused'
     
@@ -231,7 +231,7 @@ class DirectShowCapture(QObject):
 class CaptureThread(QThread):
     """Video capture thread."""
     
-    frame_ready = Signal(QImage)
+    frame_ready = Signal(QImage, float)  # (image, capture_time)
     error_occurred = Signal(str)
     state_changed = Signal(str)
     
@@ -296,9 +296,10 @@ class CaptureThread(QThread):
                 fail_count = 0
                 frame_count += 1
                 
+                import time
                 image = self._cv_frame_to_qimage(frame)
                 if image:
-                    self.frame_ready.emit(image)
+                    self.frame_ready.emit(image, time.time())
                 else:
                     logger.warning("Failed to convert frame to QImage")
             
