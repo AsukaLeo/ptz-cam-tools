@@ -15,6 +15,27 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.20.506 — NDI 视频源接入
+
+**Tag**: `V0.20.506` · **Commit**: `7c94eda` · **日期**: 2026-05-06
+
+### 功能
+- NDI 源发现：mDNS 搜索局域网 NDI 源（刷新按钮触发）
+- NDI 视频接收：选择源后连接，实时预览视频帧
+- 源列表显示名称和地址信息
+- 连接/断开状态控制，播放中禁用控件
+- 状态栏实时信息：分辨率、帧率、延时、解码方式（NDI SDK v6）
+
+### 新增文件
+- `app/utils/ndi_sdk.py` — NDI SDK ctypes 封装（加载 DLL、函数签名、数据结构）
+- `app/utils/ndi_capture.py` — NDI 源发现 + 视频接收线程 + BGRA→QImage 转换
+
+### 依赖变更
+- 运行时依赖：NDI Runtime v6（`Processing.NDI.Lib.x64.dll`）
+- 无 Python 包新增（ctypes 直绑）
+
+---
+
 ## V 0.19.506 — 网卡过滤完善 + 预览区布局修复
 
 **Tag**: `V0.19.506` · **Commit**: `e1bbb8f` · **日期**: 2026-05-06
