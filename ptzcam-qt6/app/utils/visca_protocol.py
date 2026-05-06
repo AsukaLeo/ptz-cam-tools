@@ -49,25 +49,8 @@ FOCUS_MAX_SPEED = 0x07
 # Command building
 # ---------------------------------------------------------------------------
 
-def _checksum(packet: bytes) -> bytes:
-    """Add VISCA checksum to the end of a packet.
-
-    The checksum is the negated sum of bytes between header and terminator,
-    masked to a single byte. Replaces the terminator with checksum + terminator.
-
-    Args:
-        packet: Packet bytes (should end with 0xFF).
-
-    Returns:
-        Packet with checksum byte inserted before terminator.
-    """
-    if not packet or packet[-1:] != bytes([VISCA_TERMINATOR]):
-        return packet
-
-    # Sum all bytes except the terminator
-    total = sum(packet[:-1]) & 0xFF
-    cs = (-total) & 0xFF
-    return packet[:-1] + bytes([cs, VISCA_TERMINATOR])
+# VISCA over IP (TCP/UDP) typically does NOT use checksums.
+# The 0xFF terminator is sufficient to mark the end of a command.
 
 
 def build_pan_tilt(pan_speed: int, tilt_speed: int,
@@ -99,7 +82,7 @@ def build_pan_tilt(pan_speed: int, tilt_speed: int,
         (pan_direction & 0x03) | 0x00,
         VISCA_TERMINATOR,
     ])
-    return _checksum(packet)
+    return packet
 
 
 def build_pan_tilt_stop() -> bytes:
@@ -124,7 +107,7 @@ def build_home() -> bytes:
     """
     packet = bytes([VISCA_HEADER | 0x01, VISCA_COMMAND,
                     0x06, 0x04, VISCA_TERMINATOR])
-    return _checksum(packet)
+    return packet
 
 
 def build_zoom(speed: int) -> bytes:
@@ -149,7 +132,7 @@ def build_zoom(speed: int) -> bytes:
 
     packet = bytes([VISCA_HEADER | 0x01, VISCA_COMMAND,
                     0x04, 0x07, p, VISCA_TERMINATOR])
-    return _checksum(packet)
+    return packet
 
 
 def build_focus(speed: int) -> bytes:
@@ -174,7 +157,7 @@ def build_focus(speed: int) -> bytes:
 
     packet = bytes([VISCA_HEADER | 0x01, VISCA_COMMAND,
                     0x04, 0x08, p, VISCA_TERMINATOR])
-    return _checksum(packet)
+    return packet
 
 
 def build_preset_set(preset_id: int) -> bytes:
@@ -190,7 +173,7 @@ def build_preset_set(preset_id: int) -> bytes:
     """
     packet = bytes([VISCA_HEADER | 0x01, VISCA_COMMAND,
                     0x04, 0x3F, 0x01, preset_id & 0xFF, VISCA_TERMINATOR])
-    return _checksum(packet)
+    return packet
 
 
 def build_preset_recall(preset_id: int) -> bytes:
@@ -206,7 +189,7 @@ def build_preset_recall(preset_id: int) -> bytes:
     """
     packet = bytes([VISCA_HEADER | 0x01, VISCA_COMMAND,
                     0x04, 0x3F, 0x02, preset_id & 0xFF, VISCA_TERMINATOR])
-    return _checksum(packet)
+    return packet
 
 
 # ---------------------------------------------------------------------------

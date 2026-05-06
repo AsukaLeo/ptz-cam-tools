@@ -15,6 +15,32 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.23.506 — VISCA 协议 PTZ 控制（Phase 3）
+
+**Tag**: `V0.23.506` · **Commit**: `873f944` · **日期**: 2026-05-06
+
+### 功能
+- VISCA 协议命令构造：Pan/Tilt/Zoom/Focus/Home/预设位
+- VISCA 三种传输支持：串口(pyserial 9600 8N1)、UDP(52381)、TCP(5678)
+- PTZ 面板按钮 → 实际 VISCA 命令发送
+- VISCA 面板串口/网络配置 → 实际连接管理
+- 响应解析：ACK/Completion/Error
+
+### 新增文件
+- `app/utils/visca_protocol.py` — VISCA 命令构造 + 响应解析
+- `app/utils/visca_transport.py` — 传输层抽象 + Serial/UDP/TCP 实现
+- `app/utils/visca_controller.py` — ViscaController 统一入口
+
+### 修改文件
+- `app/widgets/ptz_panel.py` — 按钮对接 controller
+- `app/widgets/visca_panel.py` — 配置对接 controller
+- `app/main_window.py` — 创建 controller 注入面板
+
+### 依赖变更
+- 新增 `pyserial>=3.5`
+
+---
+
 ## V 0.22.506 — RTSP/ONVIF 修复：空密码认证 + TCP 传输修正
 
 **Tag**: `V0.22.506` · **Commit**: `77dae89` · **日期**: 2026-05-06
