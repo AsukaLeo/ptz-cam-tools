@@ -9,8 +9,8 @@ DEFAULT_WIDTH: int = 960
 DEFAULT_HEIGHT: int = 850
 
 # Version info
-VERSION: str = "0.17.506"
-VERSION_STRING: str = f"V {VERSION}_01e9c6d By Asuka"
+VERSION: str = "0.18.506"
+VERSION_STRING: str = f"V {VERSION}_ace6b55 By Asuka"
 
 # Colors
 COLOR_BG_MAIN: str = "#fff"
