@@ -58,7 +58,7 @@ ptzcam-qt6/
 - **日期**：MDD 格式（如 506 = 5月6日）
 - **git版本**：commit hash 前7位
 
-当前版本：**V 0.17.506_placeholder By Asuka**
+当前版本：**V 0.17.506_01e9c6d By Asuka**
 
 ## 更新日志（最新）
 
