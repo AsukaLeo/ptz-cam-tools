@@ -15,6 +15,21 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.22.506 — RTSP/ONVIF 修复：空密码认证 + TCP 传输修正
+
+**Tag**: `V0.22.506` · **Commit**: `77dae89` · **日期**: 2026-05-06
+
+### 修复
+- **空密码认证**：用户名不为空时就嵌入 `user:pass@` 到 RTSP URL（即使密码为空），解决 `admin:@` 场景
+- **RTSP TCP 传输**：去掉 URL 拼接 `?transport=tcp`（某些相机视其为路径返回 404），改用环境变量 `OPENCV_FFMPEG_CAPTURE_OPTIONS=rtsp_transport;tcp`
+
+### 涉及文件
+- `app/utils/rtsp_capture.py` — TCP 传参方式修正
+- `app/tabs/rtsp_tab.py` — 认证嵌入逻辑修正
+- `app/tabs/onvif_tab.py` — 认证嵌入逻辑修正
+
+---
+
 ## V 0.21.506 — ONVIF 设备发现 + 连接 + 视频预览
 
 **Tag**: `V0.21.506` · **Commit**: `7c4db6c` · **日期**: 2026-05-06
