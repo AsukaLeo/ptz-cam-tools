@@ -137,7 +137,7 @@ def main() -> int:
     # Set application icon (from assets folder)
     icon_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
-        "assets", "app_ico_32.png"
+        "assets", "icons", "app_64x64.png"
     ).replace("\\", "/")
     app.setWindowIcon(QIcon(icon_path))
     

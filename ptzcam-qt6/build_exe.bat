@@ -50,6 +50,7 @@ echo [INFO] This may take a few minutes...
 
 python -m PyInstaller --onefile --windowed ^
     --name "PTZ-Cam-Tools" ^
+    --icon "assets\app.ico" ^
     %UPX_FLAG% ^
     --add-data "assets;assets" ^
     --add-data "arrow_down.svg;." ^
