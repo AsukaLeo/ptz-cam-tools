@@ -274,8 +274,9 @@ class RTSPTab(QWidget):
         user = self._user_edit.text().strip() if self._user_edit else ""
         password = self._pass_edit.text().strip() if self._pass_edit else ""
 
-        if user and password:
+        if user:
             # Insert credentials into URL: rtsp://user:pass@host:port/path
+            # Always embed when username is provided (even with empty password)
             if raw_url.startswith("rtsp://"):
                 url = f"rtsp://{user}:{password}@{raw_url[7:]}"
             else:

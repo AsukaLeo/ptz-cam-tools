@@ -161,8 +161,15 @@ class RTSPCaptureThread(QThread):
             self.state_changed.emit('error')
             return
 
-        # Build URL with transport option following FFmpeg RTSP conventions
-        url = self._build_url()
+        # Set FFmpeg RTSP transport via environment variable (safer than URL param)
+        # URL param like ?transport=tcp is treated as part of the URI path by some cameras
+        import os as _os
+        if self._transport == "tcp":
+            _os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = 'rtsp_transport;tcp'
+        else:
+            _os.environ.pop('OPENCV_FFMPEG_CAPTURE_OPTIONS', None)
+
+        url = self._url
         attempts = 0
 
         while not self._stop_flag and attempts <= self._MAX_RECONNECT_ATTEMPTS:
@@ -261,25 +268,6 @@ class RTSPCaptureThread(QThread):
     def stop(self) -> None:
         """Request thread to stop at the next opportunity."""
         self._stop_flag = True
-
-    def _build_url(self) -> str:
-        """Build the full RTSP URL with transport options.
-
-        Appends transport parameter for FFmpeg when TCP is selected.
-
-        Returns:
-            Processed RTSP URL string.
-        """
-        url = self._url
-        if self._transport == "tcp":
-            # FFmpeg RTSP transport option via URL parameter
-            if "?" in url:
-                if not url.endswith("?") and not url.endswith("&"):
-                    url += "&"
-                url += "transport=tcp"
-            else:
-                url += "?transport=tcp"
-        return url
 
     def _reconnect_delay(self) -> None:
         """Sleep for the configured reconnect delay, checking stop flag."""

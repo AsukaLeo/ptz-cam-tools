@@ -280,6 +280,15 @@ class ONVIFTab(QWidget):
         self._last_rtsp_url = rtsp_url
         self._logger.info(f"ONVIF connected, RTSP: {rtsp_url}")
 
+        # Embed authentication into RTSP URL
+        # Always embed when username is provided (even empty password)
+        # OpenCV FFmpeg needs rtsp://user:pass@host format for auth
+        if username:
+            if rtsp_url.startswith("rtsp://"):
+                rtsp_url = f"rtsp://{username}:{password}@{rtsp_url[7:]}"
+            else:
+                rtsp_url = f"rtsp://{username}:{password}@{rtsp_url}"
+
         # Hide preview placeholder
         if hasattr(self.preview_widget, 'hide_placeholder'):
             self.preview_widget.hide_placeholder()
