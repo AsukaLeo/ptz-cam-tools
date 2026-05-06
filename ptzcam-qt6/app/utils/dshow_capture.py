@@ -128,11 +128,8 @@ def build_dshow_device_from_qt(qt_dev: 'CameraDevice',
     }
     
     for (w, h), fmt_list in res_fps_map.items():
-        # Get all unique FPS values at this resolution
-        all_fps = sorted(set(fps for fps, _ in fmt_list), reverse=True)
-        
-        # Add entries from Qt's actual pixel formats
-        seen_qt = {}  # format_type -> whether added
+        # Add entries from Qt's actual pixel formats only
+        seen_qt = {}
         for fps_val, pix_fmt in fmt_list:
             norm_fmt = pix_fmt.upper()
             if norm_fmt not in seen_qt:
@@ -140,16 +137,9 @@ def build_dshow_device_from_qt(qt_dev: 'CameraDevice',
                 fc = fourcc.get(norm_fmt, 0)
                 formats.append(DShowFormat(
                     width=w, height=h, fps=float(fps_val),
-                    format_type=pix_fmt,  # Keep Qt's name for display
+                    format_type=pix_fmt,
                     media_subtype=fc
                 ))
-        
-        # Augment with H264 at all FPS values found at this resolution
-        for fps_val in all_fps:
-            formats.append(DShowFormat(
-                width=w, height=h, fps=float(fps_val),
-                format_type='H264', media_subtype=FOURCC_H264
-            ))
     
     return DShowDevice(
         index=physical_index,
@@ -180,9 +170,16 @@ class DirectShowCapture(QObject):
     def start_capture(self, device: DShowDevice, 
                      format_info: Optional[DShowFormat] = None,
                      callback: Optional[Callable[[QImage], None]] = None) -> bool:
-        """Start video capture."""
-        if self._is_running:
-            self.stop_capture()
+        """Start video capture.
+        
+        Ensures any previous thread is fully cleaned up first.
+        """
+        # Always stop and clean up previous thread first
+        if self._capture_thread and self._capture_thread.isRunning():
+            self._capture_thread.stop()
+            self._capture_thread.wait(3000)
+            self._capture_thread = None
+        self._is_running = False
         
         self._current_device = device
         fmt = format_info or device.get_best_preview_format()
@@ -210,6 +207,7 @@ class DirectShowCapture(QObject):
             self._capture_thread.stop()
             self._capture_thread.wait(3000)
         
+        self._capture_thread = None
         self._is_running = False
         self.state_changed.emit('stopped')
     

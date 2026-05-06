@@ -305,8 +305,8 @@ class USBTab(QWidget):
                 format_fps_map[fmt.format_type] = set()
             format_fps_map[fmt.format_type].add(int(fmt.fps))
         
-        # Add formats (prioritize H264 > MJPG > YUYV > others)
-        format_priority = {"H264": 0, "MJPG": 1, "MJPEG": 1, "YUYV": 2, "YUY2": 2, "NV12": 3}
+        # Add formats (prioritize MJPG/MJPEG > YUYV/YUY2 > NV12 > H264 last)
+        format_priority = {"MJPG": 0, "MJPEG": 0, "YUYV": 1, "YUY2": 1, "NV12": 2, "H264": 3}
         sorted_formats = sorted(
             format_fps_map.keys(),
             key=lambda x: format_priority.get(x.upper(), 99)
