@@ -47,7 +47,7 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
     
     return f"""
         {bg_rule}
-        QWidget {{ color: {COLOR_TEXT_MAIN}; }}
+        QWidget {{ color: {COLOR_TEXT_MAIN}; background: transparent; }}
         QPushButton {{ color: {COLOR_TEXT_MAIN}; background-color: #f5f5f5; }}
         QPushButton:disabled {{ color: #bbb; background-color: #e8e8e8; border: 1px solid #ddd; }}
         QLabel {{ color: {COLOR_TEXT_MAIN}; background-color: transparent; }}
@@ -112,10 +112,10 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             border: none;
         }}
 
-        /* ── Tab 样式：选中 Tab 与 Pane 融为一体 ── */
+        /* ── Tab 样式：70%半透明，背景图可透出 ── */
         QTabWidget::pane {{
             border: 1px solid {COLOR_BORDER_STD};
-            background-color: {COLOR_BG_MAIN};
+            background-color: rgba(255, 255, 255, 179);
             border-top-left-radius: 0px;
             border-top-right-radius: 0px;
             border-bottom-left-radius: 6px;
@@ -123,7 +123,7 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             margin-top: -1px;
         }}
         QTabBar::tab {{
-            background-color: #e8e8e8; color: #777;
+            background-color: rgba(232, 232, 232, 100); color: #777;
             padding: 8px 20px;
             border: 1px solid {COLOR_BORDER_STD};
             border-bottom: 1px solid {COLOR_BORDER_STD};
@@ -135,12 +135,12 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             font-size: 13px;
         }}
         QTabBar::tab:hover {{
-            background-color: #f0f0f0; color: #444;
+            background-color: rgba(240, 240, 240, 120); color: #444;
         }}
         QTabBar::tab:selected {{
-            background-color: {COLOR_BG_MAIN}; color: {COLOR_PRIMARY};
+            background-color: rgba(255, 255, 255, 179); color: {COLOR_PRIMARY};
             font-weight: 600;
-            border-bottom-color: {COLOR_BG_MAIN};
+            border-bottom-color: rgba(255, 255, 255, 179);
             margin-bottom: -1px;
             margin-right: 0px;
         }}
