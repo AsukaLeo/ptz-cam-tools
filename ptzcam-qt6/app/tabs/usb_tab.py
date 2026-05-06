@@ -450,14 +450,14 @@ class USBTab(QWidget):
         
         Args:
             image: Video frame as QImage.
-            capture_time: time.time() at capture moment.
+            capture_time: perf_counter() at capture moment (μs precision).
         """
         self._logger.debug(f"Frame received: {image.width()}x{image.height()}")
         
         import time
-        now = time.time()
+        now = time.perf_counter()
         
-        # Calculate latency
+        # Calculate latency in ms
         latency_ms = int((now - capture_time) * 1000)
         
         # Calculate real-time FPS (sliding window of frame timestamps)

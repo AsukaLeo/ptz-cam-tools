@@ -293,13 +293,14 @@ class CaptureThread(QThread):
                         break
                     continue
                 
+                import time
+                capture_ts = time.perf_counter()  # microsecond precision
                 fail_count = 0
                 frame_count += 1
                 
-                import time
                 image = self._cv_frame_to_qimage(frame)
                 if image:
-                    self.frame_ready.emit(image, time.time())
+                    self.frame_ready.emit(image, capture_ts)
                 else:
                     logger.warning("Failed to convert frame to QImage")
             
