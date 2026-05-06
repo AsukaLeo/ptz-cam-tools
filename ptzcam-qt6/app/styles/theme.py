@@ -114,7 +114,8 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
 
         /* ── Tab 样式：70%半透明，背景图可透出 ── */
         QTabWidget::pane {{
-            border: 1px solid {COLOR_BORDER_STD};
+            border: 1px solid rgba(204, 204, 204, 100);
+            border-top: none;
             background-color: rgba(255, 255, 255, 179);
             border-top-left-radius: 0px;
             border-top-right-radius: 0px;
@@ -123,10 +124,10 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             margin-top: -1px;
         }}
         QTabBar::tab {{
-            background-color: rgba(232, 232, 232, 100); color: #777;
+            background-color: rgba(232, 232, 232, 100); color: #555;
             padding: 8px 20px;
-            border: 1px solid {COLOR_BORDER_STD};
-            border-bottom: 1px solid {COLOR_BORDER_STD};
+            border: 1px solid rgba(204, 204, 204, 100);
+            border-bottom: none;
             border-top-left-radius: 6px;
             border-top-right-radius: 6px;
             border-bottom-left-radius: 0px;
@@ -135,12 +136,13 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             font-size: 13px;
         }}
         QTabBar::tab:hover {{
-            background-color: rgba(240, 240, 240, 120); color: #444;
+            background-color: rgba(240, 240, 240, 150); color: #333;
         }}
         QTabBar::tab:selected {{
             background-color: rgba(255, 255, 255, 179); color: {COLOR_PRIMARY};
             font-weight: 600;
-            border-bottom-color: rgba(255, 255, 255, 179);
+            border: 1px solid rgba(204, 204, 204, 100);
+            border-bottom: 1px solid rgba(255, 255, 255, 179);
             margin-bottom: -1px;
             margin-right: 0px;
         }}
