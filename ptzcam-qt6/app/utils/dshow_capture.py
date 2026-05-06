@@ -6,6 +6,7 @@ including H264 format support.
 
 import sys
 import ctypes
+import time
 from ctypes import wintypes
 from typing import List, Optional, Tuple, Callable
 from dataclasses import dataclass
@@ -293,7 +294,6 @@ class CaptureThread(QThread):
                         break
                     continue
                 
-                import time
                 capture_ts = time.perf_counter()  # microsecond precision
                 fail_count = 0
                 frame_count += 1
