@@ -35,3 +35,7 @@ Thumbs.db
 thirdparty/AMCap/Debug/
 thirdparty/AMCap/Backup/
 thirdparty/AMCap/Release/
+
+# FFmpeg binary DLLs (large, pushed separately)
+thirdparty/ffmpeg/bin/
+thirdparty/ffmpeg/lib/
