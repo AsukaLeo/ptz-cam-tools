@@ -58,11 +58,11 @@ ptzcam-qt6/
 - **日期**：MDD 格式（如 506 = 5月6日）
 - **git版本**：commit hash 前7位
 
-当前版本：**V 0.20.506_7c94eda By Asuka**
+当前版本：**V 0.21.506_7c4db6c By Asuka**
 
 ## 更新日志（最新）
 
-**V 0.17.506** — RTSP 拉流（OpenCV FFmpeg 后端）
+**V 0.21.506** — ONVIF 设备发现 + 连接 + 视频预览
 
 ### 功能
 - RTSP 视频流接入：设备发现、URL + 认证 + 传输协议选择

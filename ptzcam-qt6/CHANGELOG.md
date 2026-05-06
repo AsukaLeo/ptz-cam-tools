@@ -15,6 +15,27 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.21.506 — ONVIF 设备发现 + 连接 + 视频预览
+
+**Tag**: `V0.21.506` · **Commit**: `7c4db6c` · **日期**: 2026-05-06
+
+### 功能
+- ONVIF 设备发现：WS-Discovery 扫描局域网 ONVIF 设备
+- ONVIF 连接：onvif-zeep 连接设备，获取设备信息和能力
+- RTSP 流获取：通过 ONVIF Media Service 获取 RTSP 流 URL
+- 视频预览：复用已有 RTSP 捕获模块（rtsp_capture.py）拉流显示
+- 设备选择：下拉列表选择发现设备 + 手动 IP 输入
+- 连接/断开状态控制
+
+### 新增文件
+- `app/utils/onvif_device.py` — ONVIF 设备模块（发现 + 连接 + RTSP URL 获取）
+
+### 依赖变更
+- 新增 `onvif-zeep==0.2.12`（ONVIF SOAP 客户端）
+- 新增 `wsdiscovery==2.1.2`（WS-Discovery 设备发现）
+
+---
+
 ## V 0.20.506 — NDI 视频源接入
 
 **Tag**: `V0.20.506` · **Commit**: `7c94eda` · **日期**: 2026-05-06
