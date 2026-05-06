@@ -142,8 +142,7 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             background-color: rgba(255, 255, 255, 179); color: {COLOR_PRIMARY};
             font-weight: 600;
             border: 1px solid rgba(204, 204, 204, 100);
-            border-bottom: 1px solid rgba(255, 255, 255, 179);
-            margin-bottom: -1px;
+            border-bottom: none;
             margin-right: 0px;
         }}
 
