@@ -15,6 +15,16 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.18.506 — RTSP 修复：网卡过滤 + 预览区布局
+
+**Tag**: `V0.18.506` · **Commit**: `ace6b55` · **日期**: 2026-05-06
+
+### 修复
+- 网卡选择过滤虚拟设备（VMware/Hyper-V/Docker/VPN/蓝牙等不再显示）
+- 预览区被压缩问题（replaceWidget 后恢复 stretch=1）
+
+---
+
 ## V 0.17.506 — RTSP 拉流（OpenCV FFmpeg 后端）
 
 **Tag**: `V0.17.506` · **Commit**: `01e9c6d` · **日期**: 2026-05-06

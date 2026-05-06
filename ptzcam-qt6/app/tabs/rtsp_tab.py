@@ -179,14 +179,11 @@ class RTSPTab(QWidget):
             widget: Preview widget to display.
         """
         layout = self.layout()
-        if self._preview_placeholder and self._preview_placeholder.isVisible():
-            idx = layout.indexOf(self._preview_placeholder)
-            layout.replaceWidget(self._preview_placeholder, widget)
-            # replaceWidget does not preserve stretch — reapply it
-            layout.setStretch(idx, 1)
-            self._preview_placeholder.hide()
-        else:
-            layout.addWidget(widget, 1)
+        if self._preview_placeholder:
+            layout.removeWidget(self._preview_placeholder)
+            self._preview_placeholder.deleteLater()
+            self._preview_placeholder = None
+        layout.addWidget(widget, 1)
         self.preview_widget = widget
 
     @staticmethod
@@ -204,6 +201,7 @@ class RTSPTab(QWidget):
         """
         name_lower = name.lower()
         virtual_keywords = [
+            # English
             'vmware', 'vmnet', 'virtualbox', 'vbox',
             'hyper-v', 'v ethernet', 'default switch',
             'docker', 'veth', 'br-',
@@ -215,6 +213,9 @@ class RTSPTab(QWidget):
             'pseudo', 'virtual',
             'microsoft wi-fi direct',
             'localhost', 'software',
+            'wsl',
+            # Chinese (for localized Windows)
+            '蓝牙', '虚拟', '回环', '隧道', '本地连接',
         ]
         for kw in virtual_keywords:
             if kw in name_lower:
