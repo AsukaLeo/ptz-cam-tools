@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 
 from app.main_window import MainWindow
 from app.styles.theme import get_global_stylesheet
@@ -77,14 +78,25 @@ def main() -> int:
     app = QApplication(sys.argv)
     logger.debug("QApplication created")
     
-    # Get arrow icon path
+    # Get asset paths
     arrow_svg = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         "arrow_down.svg"
     ).replace("\\", "/")
+    bg_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "assets", "Background.png"
+    ).replace("\\", "/")
+    
+    # Set application icon (from assets folder)
+    icon_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "assets", "app_ico_32.png"
+    ).replace("\\", "/")
+    app.setWindowIcon(QIcon(icon_path))
     
     # Apply global stylesheet
-    app.setStyleSheet(get_global_stylesheet(arrow_svg))
+    app.setStyleSheet(get_global_stylesheet(arrow_svg, bg_path))
     logger.debug("Stylesheet applied")
     
     # Create and show main window

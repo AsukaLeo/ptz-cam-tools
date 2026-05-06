@@ -1,5 +1,7 @@
 """Application stylesheet definitions."""
 
+import os
+
 from app.utils.constants import (
     COLOR_BG_MAIN,
     COLOR_BG_PANEL,
@@ -21,18 +23,31 @@ from app.utils.constants import (
 )
 
 
-def get_global_stylesheet(arrow_svg_path: str) -> str:
+def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
     """Generate the global application stylesheet.
     
     Args:
         arrow_svg_path: Path to the ComboBox dropdown arrow SVG file.
+        bg_image_path: Optional path to background image.
         
     Returns:
         Complete stylesheet string.
     """
-    return f"""
-        QWidget {{ color: {COLOR_TEXT_MAIN}; }}
+    # Background rule
+    if bg_image_path and os.path.exists(bg_image_path):
+        bg_rule = f"""
+        QMainWindow {{
+            border-image: url({bg_image_path}) 0 0 0 0 stretch stretch;
+        }}
+        """
+    else:
+        bg_rule = f"""
         QMainWindow {{ background-color: {COLOR_BG_MAIN}; }}
+        """
+    
+    return f"""
+        {bg_rule}
+        QWidget {{ color: {COLOR_TEXT_MAIN}; }}
         QPushButton {{ color: {COLOR_TEXT_MAIN}; background-color: #f5f5f5; }}
         QPushButton:disabled {{ color: #bbb; background-color: #e8e8e8; border: 1px solid #ddd; }}
         QLabel {{ color: {COLOR_TEXT_MAIN}; background-color: transparent; }}
