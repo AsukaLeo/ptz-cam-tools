@@ -11,3 +11,7 @@ opencv-python==4.13.0.92
 
 # System Monitoring
 psutil==7.0.0
+
+# ONVIF Protocol
+onvif-zeep==0.2.12
+wsdiscovery==2.1.2
