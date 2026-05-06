@@ -121,13 +121,16 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             border-top-right-radius: 0px;
             border-bottom-left-radius: 6px;
             border-bottom-right-radius: 6px;
-            margin-top: -1px;
+        }}
+        QTabBar {{
+            background: transparent;
+            border: none;
         }}
         QTabBar::tab {{
-            background-color: rgba(232, 232, 232, 100); color: #555;
+            background-color: rgba(232, 232, 232, 130); color: #555;
             padding: 8px 20px;
             border: 1px solid rgba(204, 204, 204, 100);
-            border-bottom: none;
+            border-bottom: 1px solid rgba(204, 204, 204, 100);
             border-top-left-radius: 6px;
             border-top-right-radius: 6px;
             border-bottom-left-radius: 0px;
@@ -136,14 +139,13 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             font-size: 13px;
         }}
         QTabBar::tab:hover {{
-            background-color: rgba(240, 240, 240, 150); color: #333;
+            background-color: rgba(240, 240, 240, 180); color: #333;
         }}
         QTabBar::tab:selected {{
-            background-color: rgba(255, 255, 255, 179); color: {COLOR_PRIMARY};
+            background-color: rgba(255, 255, 255, 200); color: {COLOR_PRIMARY};
             font-weight: 600;
             border: 1px solid rgba(204, 204, 204, 100);
             border-bottom: none;
-            margin-right: 0px;
         }}
 
         /* ── SizeGrip 样式 ── */
