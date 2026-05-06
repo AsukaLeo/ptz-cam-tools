@@ -58,11 +58,11 @@ ptzcam-qt6/
 - **日期**：MDD 格式（如 506 = 5月6日）
 - **git版本**：commit hash 前7位
 
-当前版本：**V 0.23.506_873f944 By Asuka**
+当前版本：**V 0.24.506_c27b7af By Asuka**
 
 ## 更新日志（最新）
 
-**V 0.23.506** — VISCA 协议 PTZ 控制（Phase 3）
+**V 0.24.506** — PyInstaller 编译修复 + 图标替换
 
 ### 功能
 - RTSP 视频流接入：设备发现、URL + 认证 + 传输协议选择

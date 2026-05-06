@@ -15,6 +15,27 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.24.506 — PyInstaller 编译 + 图标 + 全功能修复
+
+**Tag**: `V0.24.506` · **Commit**: `c27b7af` · **日期**: 2026-05-06
+
+### 修复
+- PyInstaller 编译版 RTSP/ONVIF 不可用问题
+  - FFmpeg DLL 路径修正（_setup_bundled_paths）
+  - WSDL 文件打包（onvif-zeep 的 WSDL 在 site-packages/wsdl/）
+  - zeep 缓存路径修正（_setup_zeep_cache）
+- VISCA 协议 over IP 移除校验和（Dahua 相机不识别）
+- RTSP 认证空密码嵌入 + TCP 传参改环境变量
+
+### UI
+- 应用图标替换为 app_square.ico（16×16 ~ 256×256）
+
+### 构建
+- build_exe.bat: 一键编译，UPX 压缩
+- 输出: dist/PTZ-Cam-Tools-V{version}.exe（~178MB）
+
+---
+
 ## V 0.23.506 — VISCA 协议 PTZ 控制（Phase 3）
 
 **Tag**: `V0.23.506` · **Commit**: `873f944` · **日期**: 2026-05-06
