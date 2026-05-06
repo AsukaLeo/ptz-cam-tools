@@ -19,3 +19,19 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# VS / Build artifacts
+.vs/
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.log
+*.tlog
+*.lastbuildstate
+*.unsuccessfulbuild/*
+
+# Thirdparty build artifacts
+thirdparty/AMCap/Debug/
+thirdparty/AMCap/Backup/
+thirdparty/AMCap/Release/
