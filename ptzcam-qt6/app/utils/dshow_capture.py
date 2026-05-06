@@ -222,6 +222,98 @@ class DirectShowCapture(QObject):
         return self._is_running and self._capture_thread and self._capture_thread.isRunning()
 
 
+def probe_device_formats(device_index: int,
+                         qt_resolutions: list) -> list:
+    """Probe a device for H264 support and actual FPS at each resolution.
+    
+    Called from a background thread (not main thread). Opens fresh
+    VideoCapture instances for each FourCC + resolution combination.
+    
+    Args:
+        device_index: Physical device index.
+        qt_resolutions: List of (w, h) tuples from Qt enumeration.
+        
+    Returns:
+        List of DShowFormat entries with H264 and multi-FPS data.
+    """
+    if not _HAS_CV2 or cv2 is None:
+        return []
+    
+    from app.utils.logger import get_logger
+    logger = get_logger(__name__)
+    
+    results = []
+    
+    # Probe each FourCC
+    test_fourcc = [
+        ('H264', FOURCC_H264),
+        ('MJPG', FOURCC_MJPG),
+    ]
+    
+    for w, h in qt_resolutions:
+        found_fps = set()
+        for fmt_name, fourcc_code in test_fourcc:
+            cap = None
+            try:
+                cap = cv2.VideoCapture(device_index, cv2.CAP_DSHOW)
+                if not cap.isOpened():
+                    continue
+                
+                cap.set(cv2.CAP_PROP_FOURCC, fourcc_code)
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+                cap.grab()
+                
+                aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                af = int(cap.get(cv2.CAP_PROP_FOURCC))
+                
+                if aw != w or ah != h or af != fourcc_code:
+                    continue
+                
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                base_fps = int(fps) if fps > 0 else 30
+                
+                results.append(DShowFormat(
+                    width=w, height=h, fps=float(base_fps),
+                    format_type=fmt_name, media_subtype=fourcc_code
+                ))
+                found_fps.add(base_fps)
+            except Exception:
+                pass
+            finally:
+                if cap:
+                    cap.release()
+        
+        # If we found FourCC codes but no H264 was detected,
+        # try opening with default FourCC for FPS info
+        if not any(r.format_type == 'H264' and r.width == w and r.height == h for r in results):
+            cap = None
+            try:
+                cap = cv2.VideoCapture(device_index, cv2.CAP_DSHOW)
+                if cap.isOpened():
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+                    cap.grab()
+                    aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    if aw == w and ah == h:
+                        fps = cap.get(cv2.CAP_PROP_FPS)
+                        base_fps = int(fps) if fps > 0 else 30
+                        found_fps.add(base_fps)
+            except Exception:
+                pass
+            finally:
+                if cap:
+                    cap.release()
+    
+    logger.debug(
+        "Probe device %d: %d format results",
+        device_index, len(results)
+    )
+    return results
+
+
 class CaptureThread(QThread):
     """Video capture thread."""
     

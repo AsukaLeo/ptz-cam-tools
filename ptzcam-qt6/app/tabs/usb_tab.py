@@ -8,17 +8,43 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 from typing import Optional, Callable
 
+from PySide6.QtWidgets import QLabel
+from PySide6.QtCore import Qt, QThread, Signal as QSignal
+
 from app.styles.theme import get_control_card_style, get_primary_button_style, get_standard_button_style
 from app.utils.device_manager import DeviceManager, CameraDevice
 from app.utils.dshow_capture import (
     DirectShowCapture, DShowDevice, DShowFormat,
-    build_dshow_device_from_qt, FOURCC_H264
+    build_dshow_device_from_qt, probe_device_formats, FOURCC_H264
 )
 from app.utils.logger import get_logger
 
 
-# Import QLabel for frame display
-from PySide6.QtWidgets import QLabel
+class FormatProbeThread(QThread):
+    """Background thread for probing device formats (H264, FPS).
+
+    Runs after initial Qt display so UI is never blocked.
+    Emits formats_probed with (physical_index, [(w,h,fps,format_type,fourcc), ...]).
+    """
+    formats_probed = QSignal(int, list)  # (device_index, [(w,h,fps,format_type,fourcc), ...])
+    
+    def __init__(self, devices: list, parent=None):
+        super().__init__(parent)
+        self._devices = devices  # list of (index, name, [(w,h), ...])
+    
+    def run(self) -> None:
+        logger = get_logger(__name__)
+        for dev_idx, dev_name, res_list in self._devices:
+            logger.debug(f"Probing device {dev_idx} ({dev_name}) in background...")
+            probe_results = probe_device_formats(dev_idx, res_list)
+            if probe_results:
+                # Convert DShowFormat to plain tuples for Qt signal
+                plain_format_data = [
+                    (f.width, f.height, f.fps, f.format_type, f.media_subtype)
+                    for f in probe_results
+                ]
+                self.formats_probed.emit(dev_idx, plain_format_data)
+                logger.debug(f"Probe device {dev_idx}: {len(probe_results)} new formats")
 
 
 class USBTab(QWidget):
@@ -59,6 +85,7 @@ class USBTab(QWidget):
         
         self._current_device: Optional[DShowDevice] = None
         self._dshow_devices: list[DShowDevice] = []
+        self._probe_thread: Optional[FormatProbeThread] = None
         
         self._setup_ui()
         self._enumerate_devices()
@@ -221,6 +248,70 @@ class USBTab(QWidget):
         self._on_device_selected(0)
         
         self._notify_status(f"检测到 {len(self._dshow_devices)} 个设备")
+        
+        # Start background probe for H264 and real FPS
+        self._start_background_probe(qt_devices)
+    
+    def _start_background_probe(self, qt_devices: list) -> None:
+        """Start background thread to probe H264/real FPS for each device."""
+        # Cancel any previous probe
+        if self._probe_thread and self._probe_thread.isRunning():
+            self._probe_thread.quit()
+            self._probe_thread.wait(2000)
+        
+        # Collect resolutions per device for probing
+        probe_list = []
+        for i, qt_dev in enumerate(qt_devices):
+            if i < len(self._dshow_devices):
+                res_list = [(fmt.width, fmt.height) for fmt in self._dshow_devices[i].formats]
+                # Dedup by resolution
+                seen = set()
+                unique_res = []
+                for r in res_list:
+                    if r not in seen:
+                        seen.add(r)
+                        unique_res.append(r)
+                probe_list.append((i, qt_dev.name, unique_res))
+        
+        if not probe_list:
+            return
+        
+        self._logger.debug("Starting background format probe thread...")
+        self._probe_thread = FormatProbeThread(probe_list)
+        self._probe_thread.formats_probed.connect(self._on_formats_probed)
+        self._notify_status("正在后台探测格式能力...")
+        self._probe_thread.start()
+    
+    def _on_formats_probed(self, device_index: int, format_data: list) -> None:
+        """Handle format probe results from background thread."""
+        if device_index >= len(self._dshow_devices):
+            return
+        
+        device = self._dshow_devices[device_index]
+        
+        # Convert tuple data to DShowFormat and merge
+        existing_keys = set()
+        for f in device.formats:
+            existing_keys.add((f.width, f.height, f.format_type, int(f.fps)))
+        
+        added = 0
+        for w, h, fps, fmt_type, media_sub in format_data:
+            key = (w, h, fmt_type, int(fps))
+            if key not in existing_keys:
+                existing_keys.add(key)
+                device.formats.append(DShowFormat(
+                    width=w, height=h, fps=float(fps),
+                    format_type=fmt_type, media_subtype=media_sub
+                ))
+                added += 1
+        
+        self._logger.info(f"Device {device_index}: probed {added} new format entries")
+        
+        # Refresh UI if currently selected device
+        if device_index == self.device_combo.currentIndex():
+            self._update_format_combos_dshow(device)
+        
+        self._notify_status("格式探测完成")
     
     def _on_device_selected(self, index: int) -> None:
         """Handle device selection change.
