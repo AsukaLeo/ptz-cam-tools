@@ -26,88 +26,65 @@ try:
 except ImportError:
     cv2 = None
     _HAS_CV2 = False
-    print("Warning: OpenCV not available")
 
 
 # Windows API to get device friendly name using DirectShow
 def get_device_friendly_name(index: int) -> str:
-    """Get DirectShow device friendly name using Windows COM API.
-    
-    This accesses the DirectShow filter graph to get the actual device name.
-    
-    Args:
-        index: Device index.
-        
-    Returns:
-        Device friendly name or default name.
-    """
+    """Get DirectShow device friendly name using Windows COM API."""
     try:
-        # Use comtypes to access DirectShow
         import comtypes.client
         from comtypes import GUID
-        
-        # CLSID_SystemDeviceEnum
         CLSID_SystemDeviceEnum = GUID("{62BE5D10-60EB-11d0-BD3B-00A0C911CE86}")
-        # CLSID_VideoInputDeviceCategory
         CLSID_VideoInputDeviceCategory = GUID("{860BB310-5D01-11d0-BD3B-00A0C911CE86}")
-        
-        # Create System Device Enumerator
         dev_enum = comtypes.client.CreateObject(CLSID_SystemDeviceEnum)
-        
-        # Create class enumerator for video input devices
         class_enum = dev_enum.CreateClassEnumerator(CLSID_VideoInputDeviceCategory, 0)
-        
         if class_enum is None:
             return f"Camera {index + 1}"
-        
-        # Enumerate devices
         device_count = 0
         while True:
             try:
-                # Get next moniker
                 moniker = class_enum.Next(1)
                 if not moniker:
                     break
-                
                 if device_count == index:
-                    # Get property bag to read friendly name
                     bind_ctx = comtypes.client.CreateObject(comtypes.CLSID_BindCtx)
-                    property_bag = moniker[0].BindToStorage(bind_ctx, None, comtypes.GUID("{55272A00-42CB-11CE-8135-00AA004BB851}"))
-                    
-                    # Read FriendlyName property
+                    property_bag = moniker[0].BindToStorage(
+                        bind_ctx, None,
+                        GUID("{55272A00-42CB-11CE-8135-00AA004BB851}")
+                    )
                     try:
-                        import ctypes
                         variant = ctypes.c_void_p()
                         property_bag.Read("FriendlyName", ctypes.byref(variant), None)
-                        # Convert BSTR to string
                         if variant:
-                            friendly_name = ctypes.wstring_at(variant)
-                            return friendly_name
-                    except:
+                            return ctypes.wstring_at(variant)
+                    except Exception:
                         pass
-                
                 device_count += 1
             except Exception:
                 break
-        
     except ImportError:
         pass
     except Exception as e:
         _logger.warning("Error getting device name: %s", e)
-    
-    # Fallback: return default name
     return f"Camera {index + 1}"
 
 
-class DShowFormatType(IntEnum):
-    """DirectShow format types."""
-    YUY2 = 0x32595559  # 'YUY2'
-    MJPG = 0x47504A4D  # 'MJPG'
-    H264 = 0x34363248  # 'H264'
-    NV12 = 0x3231564E  # 'NV12'
-    I420 = 0x30323449  # 'I420'
-    RGB24 = 0x00000000  # BI_RGB
-    RGB32 = 0x00000000
+# Standard DirectShow FourCC codes
+FOURCC_H264 = 0x34363248  # 'H264'
+FOURCC_MJPG = 0x47504A4D  # 'MJPG'
+FOURCC_YUY2 = 0x32595559  # 'YUY2'
+FOURCC_NV12 = 0x3231564E  # 'NV12'
+
+
+def fourcc_to_string(fourcc: int) -> str:
+    """Convert FourCC code to string."""
+    chars = [
+        chr((fourcc >> 0) & 0xFF),
+        chr((fourcc >> 8) & 0xFF),
+        chr((fourcc >> 16) & 0xFF),
+        chr((fourcc >> 24) & 0xFF)
+    ]
+    return ''.join(chars).strip()
 
 
 @dataclass
@@ -137,22 +114,119 @@ class DShowDevice:
     
     def get_best_preview_format(self) -> Optional[DShowFormat]:
         """Get best format for preview (1080p H264 or best available)."""
-        # Prefer H264 1080p
-        h264_1080 = [f for f in self.formats 
+        if not self.formats:
+            return None
+        h264_1080 = [f for f in self.formats
                      if f.format_type == 'H264' and f.height >= 1080]
         if h264_1080:
             return max(h264_1080, key=lambda x: x.fps)
-        
-        # Prefer H264 any resolution
         h264 = self.get_h264_formats()
         if h264:
             return max(h264, key=lambda x: (x.width * x.height, x.fps))
-        
-        # Fall back to any format, prefer higher resolution
         if self.formats:
             return max(self.formats, key=lambda x: (x.width * x.height, x.fps))
-        
         return None
+
+
+# Common FPS values that are universally supported by DirectShow cameras.
+# These are offered to the user; actual negotiation happens at capture time.
+STANDARD_FPS = [60, 50, 30, 25, 15, 10, 5]
+
+# Standard compression types offered for every resolution.
+# DirectShow cameras commonly support one or more of these.
+STANDARD_FORMATS = ['H264', 'MJPG', 'YUY2', 'NV12']
+
+# Common resolutions tested for device availability (no FPS probing).
+COMMON_RESOLUTIONS = [
+    (2592, 1944), (2560, 1440),
+    (1920, 1080), (1600, 1200),
+    (1280, 720),  (1024, 768),
+    (800, 600),   (640, 480),
+    (576, 480),   (320, 240),
+]
+
+
+def enumerate_devices_fast(
+    qt_device_names: dict = None,
+    qt_formats_by_index: dict = None
+) -> List[DShowDevice]:
+    """Enumerate DirectShow video capture devices (fast path).
+    
+    Uses Qt data for resolution detection. Always offers H264, MJPG, YUY2
+    formats at standard FPS values. Actual codec capability is tested
+    at capture time, not enumeration time.
+    
+    Args:
+        qt_device_names: Dict mapping index to Qt device name.
+        qt_formats_by_index: Dict mapping index to list of
+            (w, h, fmt_type, fps) tuples from Qt enumeration.
+    
+    Returns:
+        List of available capture devices with formats.
+    """
+    if not _HAS_CV2 or cv2 is None:
+        return []
+    
+    devices = []
+    index = 0
+    
+    while True:
+        cap = None
+        try:
+            cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+            if not cap.isOpened():
+                break
+            
+            # Get device name
+            name = f"Camera {index + 1}"
+            if qt_device_names and index in qt_device_names:
+                name = qt_device_names[index]
+            
+            # Determine supported resolutions
+            res_list = []
+            if qt_formats_by_index and index in qt_formats_by_index:
+                seen_res = set()
+                for w, h, fmt_type, fps in qt_formats_by_index[index]:
+                    if (w, h) not in seen_res:
+                        seen_res.add((w, h))
+                        res_list.append((w, h))
+            
+            # Build format entries: per resolution, offer all standard formats
+            formats = []
+            for w, h in res_list:
+                for fmt_name in STANDARD_FORMATS:
+                    fourcc = 0
+                    if fmt_name == 'H264': fourcc = FOURCC_H264
+                    elif fmt_name == 'MJPG': fourcc = FOURCC_MJPG
+                    elif fmt_name == 'YUY2': fourcc = FOURCC_YUY2
+                    elif fmt_name == 'NV12': fourcc = FOURCC_NV12
+                    formats.append(DShowFormat(
+                        width=w, height=h, fps=30.0,
+                        format_type=fmt_name, media_subtype=fourcc
+                    ))
+            
+            device = DShowDevice(
+                index=index, name=name, device_path=f"video={index}",
+                formats=formats
+            )
+            devices.append(device)
+            _logger.debug(
+                "Device %d (%s): %d resolutions, %d format types",
+                index, name, len(res_list), len(formats)
+            )
+            
+        except Exception as e:
+            _logger.error("Error detecting device %d: %s", index, e)
+            break
+        finally:
+            if cap:
+                cap.release()
+        
+        index += 1
+        if index > 10:
+            break
+    
+    return devices
 
 
 class DirectShowCapture(QObject):
@@ -167,227 +241,11 @@ class DirectShowCapture(QObject):
     state_changed = Signal(str)  # 'stopped', 'playing', 'paused'
     
     def __init__(self, parent: Optional[QObject] = None) -> None:
-        """Initialize DirectShow capture.
-        
-        Args:
-            parent: Optional parent QObject.
-        """
+        """Initialize DirectShow capture."""
         super().__init__(parent)
         self._capture_thread: Optional['CaptureThread'] = None
         self._current_device: Optional[DShowDevice] = None
         self._is_running = False
-    
-    @staticmethod
-    def enumerate_devices(qt_device_names: dict = None,
-                         qt_formats_by_index: dict = None) -> List[DShowDevice]:
-        """Enumerate DirectShow video capture devices.
-        
-        Args:
-            qt_device_names: Optional dict mapping index to device name from Qt.
-            qt_formats_by_index: Optional dict mapping index to list of
-                (width, height, format_type, fps) tuples from Qt enumeration.
-        
-        Returns:
-            List of available capture devices with formats.
-        """
-        if not _HAS_CV2 or cv2 is None:
-            _logger.error("OpenCV not available")
-            return []
-        
-        devices = []
-        index = 0
-        
-        while True:
-            cap = None
-            try:
-                cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
-                if not cap.isOpened():
-                    break
-                
-                # Get device name - prefer Qt name, fallback to Windows API, then to default
-                name = f"Camera {index + 1}"
-                if qt_device_names and index in qt_device_names:
-                    name = qt_device_names[index]
-                else:
-                    # Try Windows API for virtual cameras
-                    api_name = get_device_friendly_name(index)
-                    if api_name != name:  # If API returned something different
-                        name = api_name
-                
-                # Enumerate supported formats: merge Qt + OpenCV data
-                formats = []
-                seen = set()
-                
-                # Step 1: Qt data (wide resolution coverage, may miss H264)
-                if qt_formats_by_index and index in qt_formats_by_index:
-                    for w, h, fmt_type, fps in qt_formats_by_index[index]:
-                        key = (w, h, fmt_type)
-                        if key not in seen:
-                            seen.add(key)
-                            formats.append(DShowFormat(
-                                width=w, height=h, fps=fps,
-                                format_type=fmt_type, media_subtype=0
-                            ))
-                    _logger.debug(
-                        "Device %d (%s): %d formats from Qt data",
-                        index, name, len(formats)
-                    )
-                
-                # Step 2: Release initial cap, then probe each FourCC with fresh opens
-                cap.release()
-                cap = None
-                
-                opencv_formats = DirectShowCapture._enumerate_formats(index)
-                for ofmt in opencv_formats:
-                    key = (ofmt.width, ofmt.height, ofmt.format_type)
-                    if key not in seen:
-                        seen.add(key)
-                        formats.append(ofmt)
-                        _logger.debug(
-                            "  + OpenCV extra: %s", ofmt
-                        )
-                
-                _logger.debug(
-                    "Device %d (%s): %d total formats (Qt + OpenCV merged)",
-                    index, name, len(formats)
-                )
-                
-                device = DShowDevice(
-                    index=index,
-                    name=name,
-                    device_path=f"video={index}",
-                    formats=formats
-                )
-                devices.append(device)
-                
-            except Exception as e:
-                _logger.error("Error enumerating device %d: %s", index, e)
-                break
-            finally:
-                if cap:
-                    cap.release()
-            
-            index += 1
-            
-            # Safety limit
-            if index > 10:
-                break
-        
-        return devices
-    
-    @staticmethod
-    def _enumerate_formats(device_index: int) -> List[DShowFormat]:
-        """Enumerate formats using OpenCV DirectShow.
-        
-        Opens one VideoCapture per FourCC and tests all resolutions
-        with it, to minimize device open/close overhead.
-        
-        Args:
-            device_index: DirectShow device index.
-            
-        Returns:
-            List of supported formats.
-        """
-        formats = []
-        
-        test_resolutions = [
-            (1920, 1080), (1600, 1200), (1280, 720),
-            (1024, 768), (800, 600), (640, 480),
-            (576, 480), (320, 240),
-        ]
-        
-        test_fourcc = [
-            ('H264', cv2.VideoWriter_fourcc('H', '2', '6', '4')),
-            ('MJPG', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')),
-            ('YUY2', cv2.VideoWriter_fourcc('Y', 'U', 'Y', '2')),
-            ('NV12', cv2.VideoWriter_fourcc('N', 'V', '1', '2')),
-        ]
-        
-        common_fps_values = [60, 50, 30, 25, 15, 10, 5]
-        
-        # Open one fresh cap per FourCC variant
-        for fmt_name, fourcc_code in test_fourcc:
-            cap = None
-            try:
-                cap = cv2.VideoCapture(device_index, cv2.CAP_DSHOW)
-                if not cap.isOpened():
-                    continue
-                
-                # Set FourCC first
-                cap.set(cv2.CAP_PROP_FOURCC, fourcc_code)
-                cap.grab()  # Force negotiation
-                
-                actual_fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
-                if actual_fourcc != fourcc_code:
-                    continue  # This FourCC not supported
-                
-                # Now test each resolution
-                for width, height in test_resolutions:
-                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-                    
-                    aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                    ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                    
-                    if aw != width or ah != height:
-                        continue
-                    
-                    fps = cap.get(cv2.CAP_PROP_FPS)
-                    base_fps = int(fps) if fps > 0 else 30
-                    
-                    formats.append(DShowFormat(
-                        width=width, height=height, fps=float(base_fps),
-                        format_type=fmt_name, media_subtype=fourcc_code
-                    ))
-                    
-                    for f in common_fps_values:
-                        if f < base_fps:
-                            formats.append(DShowFormat(
-                                width=width, height=height, fps=float(f),
-                                format_type=fmt_name, media_subtype=fourcc_code
-                            ))
-                    
-                    _logger.debug(
-                        "  OpenCV %s: %dx%d @ %d fps",
-                        fmt_name, width, height, base_fps
-                    )
-            except Exception:
-                pass
-            finally:
-                if cap:
-                    cap.release()
-        
-        # Dedup by (w, h, format_type, fps)
-        seen = set()
-        result = []
-        for fmt in formats:
-            key = (fmt.width, fmt.height, fmt.format_type, int(fmt.fps))
-            if key not in seen:
-                seen.add(key)
-                result.append(fmt)
-        
-        return result
-    
-    @staticmethod
-    def _fourcc_to_string(fourcc: int) -> str:
-        """Convert FourCC code to string.
-        
-        Args:
-            fourcc: FourCC integer code.
-            
-        Returns:
-            Format string.
-        """
-        try:
-            chars = [
-                chr((fourcc >> 0) & 0xFF),
-                chr((fourcc >> 8) & 0xFF),
-                chr((fourcc >> 16) & 0xFF),
-                chr((fourcc >> 24) & 0xFF)
-            ]
-            return ''.join(chars).strip()
-        except:
-            return f"FourCC({fourcc:08X})"
     
     def start_capture(self, device: DShowDevice, 
                      format_info: Optional[DShowFormat] = None,
@@ -430,7 +288,7 @@ class DirectShowCapture(QObject):
         """Stop video capture."""
         if self._capture_thread and self._capture_thread.isRunning():
             self._capture_thread.stop()
-            self._capture_thread.wait(3000)  # Wait up to 3 seconds
+            self._capture_thread.wait(3000)
         
         self._is_running = False
         self.state_changed.emit('stopped')
@@ -442,11 +300,7 @@ class DirectShowCapture(QObject):
         self.state_changed.emit(state)
     
     def is_running(self) -> bool:
-        """Check if capture is running.
-        
-        Returns:
-            True if capturing.
-        """
+        """Check if capture is running."""
         return self._is_running and self._capture_thread and self._capture_thread.isRunning()
 
 
@@ -459,13 +313,6 @@ class CaptureThread(QThread):
     
     def __init__(self, device: DShowDevice, format_info: DShowFormat,
                  parent: Optional[QObject] = None) -> None:
-        """Initialize capture thread.
-        
-        Args:
-            device: Device to capture from.
-            format_info: Format to use.
-            parent: Optional parent.
-        """
         super().__init__(parent)
         self._device = device
         self._format = format_info
@@ -482,27 +329,23 @@ class CaptureThread(QThread):
         logger = get_logger(__name__)
         
         try:
-            # Open capture with DirectShow backend
-            logger.debug(f"Opening device {self._device.index}: {self._device.name}")
+            logger.debug("Opening device %d: %s", self._device.index, self._device.name)
             self._cap = cv2.VideoCapture(self._device.index, cv2.CAP_DSHOW)
             
             if not self._cap.isOpened():
-                logger.error(f"Failed to open device {self._device.name}")
+                logger.error("Failed to open device %s", self._device.name)
                 self.error_occurred.emit(f"Failed to open device {self._device.name}")
                 return
             
-            logger.debug(f"Device opened successfully")
-            
             # Set format
-            logger.debug(f"Setting format: {self._format.width}x{self._format.height} @ {self._format.fps}fps")
+            logger.debug("Setting format: %s", self._format)
             self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self._format.width)
             self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self._format.height)
             self._cap.set(cv2.CAP_PROP_FPS, self._format.fps)
             
             # Set codec for H264
             if self._format.format_type == 'H264':
-                # Try to force H264 codec
-                self._cap.set(cv2.CAP_PROP_FOURCC, 
+                self._cap.set(cv2.CAP_PROP_FOURCC,
                              cv2.VideoWriter_fourcc('H', '2', '6', '4'))
             
             self.state_changed.emit('playing')
@@ -518,20 +361,19 @@ class CaptureThread(QThread):
                 if not ret:
                     fail_count += 1
                     if fail_count == 1:
-                        logger.warning(f"First read failed")
+                        logger.warning("First read failed")
                     elif fail_count % 30 == 0:
-                        logger.warning(f"Read failed {fail_count} times")
+                        logger.warning("Read failed %d times", fail_count)
                     continue
                 
-                fail_count = 0  # Reset on success
+                fail_count = 0
                 frame_count += 1
                 
                 if frame_count == 1:
-                    logger.debug(f"First frame captured: {frame.shape}")
+                    logger.debug("First frame captured: %s", frame.shape)
                 elif frame_count % 30 == 0:
-                    logger.debug(f"Captured {frame_count} frames")
+                    logger.debug("Captured %d frames", frame_count)
                 
-                # Convert OpenCV frame to QImage
                 image = self._cv_frame_to_qimage(frame)
                 if image:
                     self.frame_ready.emit(image)
@@ -552,26 +394,15 @@ class CaptureThread(QThread):
     
     @staticmethod
     def _cv_frame_to_qimage(frame) -> Optional[QImage]:
-        """Convert OpenCV frame to QImage.
-        
-        Args:
-            frame: OpenCV BGR frame.
-            
-        Returns:
-            QImage or None.
-        """
+        """Convert OpenCV frame to QImage."""
         global cv2
         if frame is None or frame.size == 0 or cv2 is None:
             return None
         
-        # Convert BGR to RGB
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        
         height, width = rgb_frame.shape[:2]
         bytes_per_line = 3 * width
         
-        image = QImage(rgb_frame.data, width, height, 
+        image = QImage(rgb_frame.data, width, height,
                       bytes_per_line, QImage.Format_RGB888)
-        
-        # Create a copy to ensure data persistence
         return image.copy()
