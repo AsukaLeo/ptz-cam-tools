@@ -17,6 +17,7 @@ from app.styles.theme import get_global_stylesheet
 from app.widgets import PreviewWidget, PTZPanel, VISCAPanel
 from app.tabs import USBTab, RTSPTab, NDITab, ONVIFTab, SettingsTab
 from app.utils.logger import get_logger
+from app.utils.visca_controller import ViscaController
 
 
 class MainWindow(QMainWindow):
@@ -147,24 +148,34 @@ class MainWindow(QMainWindow):
     
     def _create_control_panels(self, parent_layout: QVBoxLayout) -> None:
         """Create PTZ and VISCA control panels.
-        
+
+        Also creates the ViscaController and injects it into both panels.
+
         Args:
             parent_layout: Layout to add panels to.
         """
+        # Create VISCA controller
+        self._visca_controller = ViscaController()
+        self._visca_controller.on_status_update = self.update_status
+
         # Create panels
         self._ptz_panel = PTZPanel()
         self._visca_panel = VISCAPanel()
-        
-        # Set up status callbacks
+
+        # Inject controller
+        self._ptz_panel.set_controller(self._visca_controller)
+        self._visca_panel.set_controller(self._visca_controller)
+
+        # Set up status callbacks (fallback for non-controller messages)
         self._ptz_panel.set_status_callback(self.update_status)
         self._visca_panel.set_status_callback(self.update_status)
-        
+
         # Layout panels side by side
         controls_layout = QHBoxLayout()
         controls_layout.setSpacing(12)
         controls_layout.addWidget(self._ptz_panel, 1)
         controls_layout.addWidget(self._visca_panel, 1)
-        
+
         parent_layout.addLayout(controls_layout)
     
     def _create_status_bar(self) -> None:

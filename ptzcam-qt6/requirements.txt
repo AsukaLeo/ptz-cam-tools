@@ -15,3 +15,6 @@ psutil==7.0.0
 # ONVIF Protocol
 onvif-zeep==0.2.12
 wsdiscovery==2.1.2
+
+# PTZ Control (VISCA)
+pyserial>=3.5
