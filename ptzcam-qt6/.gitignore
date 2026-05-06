@@ -27,6 +27,8 @@ Thumbs.db
 .vs/
 *.obj
 *.exe
+# But allow versioned release EXEs in dist/
+!dist/PTZ-Cam-Tools-*.exe
 *.pdb
 *.ilk
 *.log
