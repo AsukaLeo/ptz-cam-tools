@@ -180,17 +180,53 @@ class RTSPTab(QWidget):
         """
         layout = self.layout()
         if self._preview_placeholder and self._preview_placeholder.isVisible():
+            idx = layout.indexOf(self._preview_placeholder)
             layout.replaceWidget(self._preview_placeholder, widget)
+            # replaceWidget does not preserve stretch — reapply it
+            layout.setStretch(idx, 1)
             self._preview_placeholder.hide()
         else:
             layout.addWidget(widget, 1)
         self.preview_widget = widget
 
-    def _enumerate_network_interfaces(self) -> None:
-        """Enumerate network interfaces using psutil.
+    @staticmethod
+    def _is_physical_nic(name: str) -> bool:
+        """Check if a network interface name corresponds to a physical NIC.
 
-        Populates the network interface combo box with adapter names
-        and their associated IPv4 addresses.
+        Filters out virtual adapters (VMware, Hyper-V, Docker, VPN, etc.)
+        by matching against known virtual adapter keywords.
+
+        Args:
+            name: Network interface name.
+
+        Returns:
+            True if the interface appears to be a physical NIC.
+        """
+        name_lower = name.lower()
+        virtual_keywords = [
+            'vmware', 'vmnet', 'virtualbox', 'vbox',
+            'hyper-v', 'v ethernet', 'default switch',
+            'docker', 'veth', 'br-',
+            'bluetooth', 'bluetooh',
+            'loopback', 'isatap', '6to4',
+            'tap-', 'tap-windows',
+            'openvpn', 'tun-', 'tun0',
+            'npcap', 'npcappacket',
+            'pseudo', 'virtual',
+            'microsoft wi-fi direct',
+            'localhost', 'software',
+        ]
+        for kw in virtual_keywords:
+            if kw in name_lower:
+                return False
+        return True
+
+    def _enumerate_network_interfaces(self) -> None:
+        """Enumerate physical network interfaces using psutil.
+
+        Populates the network interface combo box with physical adapter
+        names and their associated IPv4 addresses. Virtual adapters
+        (VMware, Hyper-V, Docker, VPN, etc.) are filtered out.
         """
         if self._net_combo is None:
             return
@@ -206,6 +242,8 @@ class RTSPTab(QWidget):
 
         found = False
         for iface_name, snic_list in addrs.items():
+            if not self._is_physical_nic(iface_name):
+                continue
             for snic in snic_list:
                 # Only show IPv4 addresses
                 if snic.family.name == 'AF_INET' if hasattr(snic.family, 'name') else snic.family == 2:
