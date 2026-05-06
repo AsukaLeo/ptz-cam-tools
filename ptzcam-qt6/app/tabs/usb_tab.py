@@ -12,9 +12,13 @@ from app.styles.theme import get_control_card_style, get_primary_button_style, g
 from app.utils.device_manager import DeviceManager, CameraDevice
 from app.utils.dshow_capture import (
     DirectShowCapture, DShowDevice, DShowFormat,
-    build_dshow_device_from_qt
+    build_dshow_device_from_qt, FOURCC_H264
 )
 from app.utils.logger import get_logger
+
+
+# Import QLabel for frame display
+from PySide6.QtWidgets import QLabel
 
 
 class USBTab(QWidget):
@@ -301,7 +305,7 @@ class USBTab(QWidget):
                 format_fps_map[fmt.format_type] = set()
             format_fps_map[fmt.format_type].add(int(fmt.fps))
         
-        # Add formats (prioritize MJPG/MJPEG > YUYV/YUY2 > NV12 > H264 last)
+        # Add formats (MJPG first, H264 last)
         format_priority = {"MJPG": 0, "MJPEG": 0, "YUYV": 1, "YUY2": 1, "NV12": 2, "H264": 3}
         sorted_formats = sorted(
             format_fps_map.keys(),

@@ -87,17 +87,13 @@ class DShowDevice:
         return None
 
 
-# Standard FPS values that DirectShow cameras commonly support
-STANDARD_FPS = [60, 50, 30, 25, 15, 10, 5]
-
-
-def build_dshow_device_from_qt(qt_dev: 'CameraDevice',
+def build_dshow_device_from_qt(qt_dev: 'CameraDevice', 
                                 physical_index: int) -> Optional[DShowDevice]:
     """Build a DShowDevice from Qt CameraDevice data.
     
-    Uses Qt's format list for base resolution/format/FPS data.
-    Augments with H264 and MJPG options at standard FPS values for
-    each resolution (since Qt doesn't report H264 capabilities).
+    Uses Qt's format list for resolution/FPS data. Augments with
+    H264 format entries since Qt doesn't report H264 capabilities.
+    No OpenCV involved - safe to call from the main thread.
     
     Args:
         qt_dev: Qt CameraDevice with video_formats.
@@ -106,55 +102,54 @@ def build_dshow_device_from_qt(qt_dev: 'CameraDevice',
     Returns:
         DShowDevice with formats, or None if no formats.
     """
+    from app.utils.device_manager import CameraDevice as _CD  # type: ignore
+    
     if not qt_dev.video_formats:
         return None
     
-    # Collect unique resolutions from Qt
-    resolutions = []
-    seen_res = set()
+    # Collect unique (resolution, FPS) pairs from Qt
+    res_fps_map = {}  # (w, h) -> set of fps values
     for qfmt in qt_dev.video_formats:
         w, h = qfmt.resolution
-        if (w, h) not in seen_res:
-            seen_res.add((w, h))
-            resolutions.append((w, h))
+        fps = int(qfmt.max_fps)
+        key = (w, h)
+        if key not in res_fps_map:
+            res_fps_map[key] = []
+        res_fps_map[key].append((fps, qfmt.pixel_format))
     
     formats = []
-    fourcc_map = {
+    fourcc = {  # format_type -> fourcc
         'H264': FOURCC_H264,
         'MJPG': FOURCC_MJPG,
-        'YUYV': FOURCC_YUY2,
+        'YUYV': FOURCC_YUY2,  # Qt uses YUYV, DShow uses YUY2 (same FourCC)
         'YUY2': FOURCC_YUY2,
         'MJPEG': FOURCC_MJPG,
         'NV12': FOURCC_NV12,
     }
     
-    for (w, h) in resolutions:
-        # Step 1: Add Qt-reported format entries (one per unique pixel format)
-        seen_qt = set()
-        for qfmt in qt_dev.video_formats:
-            if qfmt.resolution != (w, h):
-                continue
-            norm = qfmt.pixel_format.upper()
-            if norm not in seen_qt:
-                seen_qt.add(norm)
-                fc = fourcc_map.get(norm, 0)
+    for (w, h), fmt_list in res_fps_map.items():
+        # Get all unique FPS values at this resolution
+        all_fps = sorted(set(fps for fps, _ in fmt_list), reverse=True)
+        
+        # Add entries from Qt's actual pixel formats
+        seen_qt = {}  # format_type -> whether added
+        for fps_val, pix_fmt in fmt_list:
+            norm_fmt = pix_fmt.upper()
+            if norm_fmt not in seen_qt:
+                seen_qt[norm_fmt] = True
+                fc = fourcc.get(norm_fmt, 0)
                 formats.append(DShowFormat(
-                    width=w, height=h, fps=float(qfmt.max_fps),
-                    format_type=qfmt.pixel_format, media_subtype=fc
+                    width=w, height=h, fps=float(fps_val),
+                    format_type=pix_fmt,  # Keep Qt's name for display
+                    media_subtype=fc
                 ))
         
-        # Step 2: Augment with H264 + MJPG at standard FPS values
-        # Qt rarely reports H264, so we always offer it as an option.
-        # Users who select it will get actual negotiation at capture time.
-        augmented_fmts = []
-        for fmt_name, fourcc in [('MJPG', FOURCC_MJPG), ('H264', FOURCC_H264)]:
-            if fmt_name.upper() not in seen_qt:
-                for fps in STANDARD_FPS:
-                    augmented_fmts.append(DShowFormat(
-                        width=w, height=h, fps=float(fps),
-                        format_type=fmt_name, media_subtype=fourcc
-                    ))
-        formats.extend(augmented_fmts)
+        # Augment with H264 at all FPS values found at this resolution
+        for fps_val in all_fps:
+            formats.append(DShowFormat(
+                width=w, height=h, fps=float(fps_val),
+                format_type='H264', media_subtype=FOURCC_H264
+            ))
     
     return DShowDevice(
         index=physical_index,
@@ -185,11 +180,7 @@ class DirectShowCapture(QObject):
     def start_capture(self, device: DShowDevice, 
                      format_info: Optional[DShowFormat] = None,
                      callback: Optional[Callable[[QImage], None]] = None) -> bool:
-        """Start video capture.
-        
-        Ensures any previous thread is fully cleaned up first.
-        """
-        # Always stop and clean up previous thread first
+        """Start video capture. Always fully cleans up previous thread first."""
         if self._capture_thread and self._capture_thread.isRunning():
             self._capture_thread.stop()
             self._capture_thread.wait(3000)
@@ -270,7 +261,7 @@ class CaptureThread(QThread):
                 self.error_occurred.emit(f"Failed to open device {self._device.name}")
                 return
             
-            # Set format
+            # Set resolution and FPS
             logger.debug("Setting format: %s", self._format)
             self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self._format.width)
             self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self._format.height)
