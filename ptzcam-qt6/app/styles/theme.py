@@ -116,7 +116,7 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
         QTabWidget::pane {{
             border: 1px solid rgba(204, 204, 204, 100);
             border-top: none;
-            background-color: rgba(255, 255, 255, 179);
+            background-color: rgba(255, 255, 255, 200);
             border-top-left-radius: 0px;
             border-top-right-radius: 0px;
             border-bottom-left-radius: 6px;

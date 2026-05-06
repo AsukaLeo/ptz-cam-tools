@@ -186,7 +186,7 @@ class PTZPanel(QFrame):
             Configured QPushButton.
         """
         btn = QPushButton(text)
-        btn.setFixedWidth(60)
+        btn.setFixedWidth(80)
         btn.setStyleSheet(get_standard_button_style())
         btn.clicked.connect(callback)
         return btn
