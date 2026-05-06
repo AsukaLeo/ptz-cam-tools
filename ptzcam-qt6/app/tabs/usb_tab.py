@@ -129,6 +129,7 @@ class USBTab(QWidget):
         
         self.res_combo = QComboBox()
         self.res_combo.setFixedWidth(140)
+        self.res_combo.setMaxVisibleItems(12)
         self.res_combo.setEnabled(False)
         self.res_combo.currentIndexChanged.connect(self._on_resolution_changed)
         param_row.addWidget(self.res_combo)
@@ -141,6 +142,7 @@ class USBTab(QWidget):
         
         self.fmt_combo = QComboBox()
         self.fmt_combo.setFixedWidth(100)
+        self.fmt_combo.setMaxVisibleItems(8)
         self.fmt_combo.setEnabled(False)
         param_row.addWidget(self.fmt_combo)
         
@@ -152,6 +154,7 @@ class USBTab(QWidget):
         
         self.fps_combo = QComboBox()
         self.fps_combo.setFixedWidth(90)
+        self.fps_combo.setMaxVisibleItems(10)
         self.fps_combo.setEnabled(False)
         param_row.addWidget(self.fps_combo)
         

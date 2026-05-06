@@ -70,6 +70,19 @@ def get_global_stylesheet(arrow_svg_path: str) -> str:
         QComboBox QAbstractItemView::item:hover {{
             background-color: #e8e8e8;
         }}
+        QComboBox QAbstractItemView QScrollBar:vertical {{
+            width: 8px; background: transparent; margin: 0;
+        }}
+        QComboBox QAbstractItemView QScrollBar::handle:vertical {{
+            background: #ccc; border-radius: 4px; min-height: 30px;
+        }}
+        QComboBox QAbstractItemView QScrollBar::handle:vertical:hover {{
+            background: #aaa;
+        }}
+        QComboBox QAbstractItemView QScrollBar::add-line:vertical,
+        QComboBox QAbstractItemView QScrollBar::sub-line:vertical {{ height: 0px; }}
+        QComboBox QAbstractItemView QScrollBar::add-page:vertical,
+        QComboBox QAbstractItemView QScrollBar::sub-page:vertical {{ background: none; }}
 
         QStatusBar {{ color: {COLOR_TEXT_MAIN}; background-color: #f0f0f0; }}
         QStatusBar QLabel {{ color: {COLOR_TEXT_SECONDARY}; background-color: transparent; }}

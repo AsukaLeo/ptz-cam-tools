@@ -233,8 +233,11 @@ class DirectShowCapture(QObject):
                         index, name, len(formats)
                     )
                 
-                # Step 2: OpenCV probe (catches H264 that Qt may miss)
-                opencv_formats = DirectShowCapture._enumerate_formats(cap)
+                # Step 2: Release initial cap, then probe each FourCC with fresh opens
+                cap.release()
+                cap = None
+                
+                opencv_formats = DirectShowCapture._enumerate_formats(index)
                 for ofmt in opencv_formats:
                     key = (ofmt.width, ofmt.height, ofmt.format_type)
                     if key not in seen:
@@ -273,88 +276,97 @@ class DirectShowCapture(QObject):
         return devices
     
     @staticmethod
-    def _enumerate_formats(cap) -> List[DShowFormat]:
-        """Enumerate formats from OpenCV capture.
-
-        Tries common resolutions and FourCC codecs to discover
-        supported format combinations (including H264).
+    def _enumerate_formats(device_index: int) -> List[DShowFormat]:
+        """Enumerate formats using OpenCV DirectShow.
+        
+        Opens one VideoCapture per FourCC and tests all resolutions
+        with it, to minimize device open/close overhead.
         
         Args:
-            cap: OpenCV VideoCapture instance.
+            device_index: DirectShow device index.
             
         Returns:
             List of supported formats.
         """
         formats = []
         
-        # Common resolutions to test
         test_resolutions = [
-            (1920, 1080),
-            (1280, 720),
-            (1024, 768),
-            (800, 600),
-            (640, 480),
-            (320, 240),
+            (1920, 1080), (1600, 1200), (1280, 720),
+            (1024, 768), (800, 600), (640, 480),
+            (576, 480), (320, 240),
         ]
         
-        # FourCC codes to try at each resolution
-        # CV_FOURCC_PROMPT approach: set and re-read to detect supported format
-        test_fourcc = {
-            'MJPG': cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'),
-            'H264': cv2.VideoWriter_fourcc('H', '2', '6', '4'),
-            'YUY2': cv2.VideoWriter_fourcc('Y', 'U', 'Y', '2'),
-            'NV12': cv2.VideoWriter_fourcc('N', 'V', '1', '2'),
-        }
+        test_fourcc = [
+            ('H264', cv2.VideoWriter_fourcc('H', '2', '6', '4')),
+            ('MJPG', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')),
+            ('YUY2', cv2.VideoWriter_fourcc('Y', 'U', 'Y', '2')),
+            ('NV12', cv2.VideoWriter_fourcc('N', 'V', '1', '2')),
+        ]
         
-        for width, height in test_resolutions:
-            # Set resolution
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-            
-            actual_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            actual_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            
-            if actual_width != width or actual_height != height:
-                continue  # Resolution not supported
-            
-            # First, read the default FourCC at this resolution
-            default_fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
-            default_type = DirectShowCapture._fourcc_to_string(default_fourcc)
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            formats.append(DShowFormat(
-                width=actual_width, height=actual_height,
-                fps=fps if fps > 0 else 30.0,
-                format_type=default_type, media_subtype=default_fourcc
-            ))
-            
-            # Try alternate FourCC codes (some DirectShow cameras support
-            # switching codec at the same resolution)
-            for fmt_name, fourcc_code in test_fourcc.items():
-                if fourcc_code == default_fourcc:
-                    continue  # Skip default (already added)
+        common_fps_values = [60, 50, 30, 25, 15, 10, 5]
+        
+        # Open one fresh cap per FourCC variant
+        for fmt_name, fourcc_code in test_fourcc:
+            cap = None
+            try:
+                cap = cv2.VideoCapture(device_index, cv2.CAP_DSHOW)
+                if not cap.isOpened():
+                    continue
                 
-                try:
-                    cap.set(cv2.CAP_PROP_FOURCC, fourcc_code)
-                    readback = int(cap.get(cv2.CAP_PROP_FOURCC))
-                    if readback == fourcc_code:
-                        formats.append(DShowFormat(
-                            width=actual_width, height=actual_height,
-                            fps=cap.get(cv2.CAP_PROP_FPS) or 30.0,
-                            format_type=fmt_name, media_subtype=fourcc_code
-                        ))
-                except Exception:
-                    pass
+                # Set FourCC first
+                cap.set(cv2.CAP_PROP_FOURCC, fourcc_code)
+                cap.grab()  # Force negotiation
+                
+                actual_fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
+                if actual_fourcc != fourcc_code:
+                    continue  # This FourCC not supported
+                
+                # Now test each resolution
+                for width, height in test_resolutions:
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+                    
+                    aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    
+                    if aw != width or ah != height:
+                        continue
+                    
+                    fps = cap.get(cv2.CAP_PROP_FPS)
+                    base_fps = int(fps) if fps > 0 else 30
+                    
+                    formats.append(DShowFormat(
+                        width=width, height=height, fps=float(base_fps),
+                        format_type=fmt_name, media_subtype=fourcc_code
+                    ))
+                    
+                    for f in common_fps_values:
+                        if f < base_fps:
+                            formats.append(DShowFormat(
+                                width=width, height=height, fps=float(f),
+                                format_type=fmt_name, media_subtype=fourcc_code
+                            ))
+                    
+                    _logger.debug(
+                        "  OpenCV %s: %dx%d @ %d fps",
+                        fmt_name, width, height, base_fps
+                    )
+            except Exception:
+                pass
+            finally:
+                if cap:
+                    cap.release()
         
-        # Remove duplicates
+        # Dedup by (w, h, format_type, fps)
         seen = set()
-        unique_formats = []
+        result = []
         for fmt in formats:
-            key = (fmt.width, fmt.height, fmt.format_type)
+            key = (fmt.width, fmt.height, fmt.format_type, int(fmt.fps))
             if key not in seen:
                 seen.add(key)
-                unique_formats.append(fmt)
+                result.append(fmt)
         
-        return unique_formats
+        return result
     
     @staticmethod
     def _fourcc_to_string(fourcc: int) -> str:
