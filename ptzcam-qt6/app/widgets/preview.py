@@ -115,5 +115,11 @@ class PreviewWidget(QFrame):
         self.placeholder_label.hide()
     
     def show_placeholder(self) -> None:
-        """Show the placeholder text (call when video stops)."""
+        """Restore preview to initial idle state.
+
+        Hides the video frame and shows the placeholder text.
+        This clears any residual last-frame image from the preview area.
+        """
+        self.video_label.hide()
+        self.video_label.clear()
         self.placeholder_label.show()
