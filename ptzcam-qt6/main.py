@@ -16,6 +16,31 @@ import argparse
 # Add the project root to the path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+
+def _setup_bundled_paths() -> None:
+    """Add bundled DLL directories to system PATH for PyInstaller frozen builds.
+
+    When running from a PyInstaller single-file EXE, bundled data files
+    (FFmpeg DLLs, etc.) are extracted to sys._MEIPASS. They must be on
+    the system PATH for OpenCV's FFmpeg backend to load them.
+    """
+    if not getattr(sys, 'frozen', False):
+        return  # Not a PyInstaller build
+
+    meipass = sys._MEIPASS  # type: ignore[attr-defined]
+
+    # FFmpeg DLLs (for OpenCV RTSP decoding)
+    ffmpeg_dir = os.path.join(meipass, 'thirdparty', 'ffmpeg', 'bin')
+    if os.path.isdir(ffmpeg_dir):
+        os.environ['PATH'] = ffmpeg_dir + os.pathsep + os.environ['PATH']
+
+    # Also add the base _MEIPASS dir (for opencv_videoio_ffmpeg*.dll etc.)
+    os.environ['PATH'] = meipass + os.pathsep + os.environ['PATH']
+
+
+# Run at module load time, before any OpenCV/FFmpeg imports
+_setup_bundled_paths()
+
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon

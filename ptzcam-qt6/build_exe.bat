@@ -3,12 +3,16 @@ chcp 65001 >nul
 REM PTZ-Cam-Tools EXE Builder
 REM Uses PyInstaller to compile into a single executable
 
+setlocal
+set SCRIPT_DIR=%~dp0
+set UPX_DIR=%USERPROFILE%\.workbuddy\tools\upx
+
 echo ==========================================
 echo PTZ-Cam-Tools EXE Builder
 echo ==========================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%SCRIPT_DIR%"
 
 REM Check Python
 python --version >nul 2>&1
@@ -25,23 +29,33 @@ if errorlevel 1 (
     pip install pyinstaller
 )
 
+REM Check UPX
+set UPX_FLAG=
+if exist "%UPX_DIR%\upx.exe" (
+    echo [INFO] UPX found, will compress output
+    set UPX_FLAG=--upx-dir "%UPX_DIR%"
+) else (
+    echo [INFO] UPX not found, skipping compression
+    echo [INFO] Download from: https://github.com/upx/upx/releases
+    echo [INFO] Extract to: %UPX_DIR%
+)
+
 echo [INFO] Building PTZ-Cam-Tools.exe...
 echo [INFO] This may take a few minutes...
 
 python -m PyInstaller --onefile --windowed ^
     --name "PTZ-Cam-Tools" ^
+    %UPX_FLAG% ^
     --add-data "assets;assets" ^
     --add-data "arrow_down.svg;." ^
     --add-data "thirdparty/ffmpeg/bin;thirdparty/ffmpeg/bin" ^
-    --hidden-import "PySide6.QtCore" ^
-    --hidden-import "PySide6.QtGui" ^
-    --hidden-import "PySide6.QtWidgets" ^
-    --hidden-import "cv2" ^
-    --hidden-import "psutil" ^
-    --hidden-import "serial" ^
-    --hidden-import "onvif" ^
-    --hidden-import "wsdiscovery" ^
-    --hidden-import "zeep" ^
+    --exclude-module "matplotlib" ^
+    --exclude-module "PIL" ^
+    --exclude-module "scipy" ^
+    --exclude-module "IPython" ^
+    --exclude-module "notebook" ^
+    --exclude-module "jupyter" ^
+    --exclude-module "pandas" ^
     --collect-all "onvif_zeep" ^
     main.py
 
