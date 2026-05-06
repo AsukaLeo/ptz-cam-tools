@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 from typing import Optional, Callable
 
-from app.styles.theme import get_control_card_style, get_primary_button_style, get_standard_button_style
+from app.styles.theme import get_control_card_style, get_primary_button_style, get_danger_button_style, get_standard_button_style
 from app.utils.device_manager import DeviceManager, CameraDevice
 from app.utils.dshow_capture import (
     DirectShowCapture, DShowDevice, DShowFormat,
@@ -67,6 +67,7 @@ class USBTab(QWidget):
         self._cpu_process = psutil.Process()  # For per-process CPU monitoring
         self._cpu_count = psutil.cpu_count()  # Number of logical cores
         self._last_cpu_update: float = 0.0    # Throttle CPU check to 1s
+        self._is_playing: bool = False        # Guards against stale frame signals
         
         self._setup_ui()
         self._enumerate_devices()
@@ -416,6 +417,8 @@ class USBTab(QWidget):
         
         if success:
             self.play_btn.setText("停止")
+            self.play_btn.setStyleSheet(get_danger_button_style())
+            self._is_playing = True
             self._notify_status("视频播放中")
         else:
             # Restore controls on failure
@@ -440,11 +443,13 @@ class USBTab(QWidget):
     def _update_ui_stopped(self) -> None:
         """Update UI to stopped state (without calling stop_capture)."""
         # Show placeholder
+        self._is_playing = False
         if hasattr(self.preview_widget, 'show_placeholder'):
             self.preview_widget.show_placeholder()
         
         # Update UI
         self.play_btn.setText("播放")
+        self.play_btn.setStyleSheet(get_primary_button_style())
         self.device_combo.setEnabled(True)
         self.refresh_btn.setEnabled(True)
         self.res_combo.setEnabled(True)
@@ -464,6 +469,11 @@ class USBTab(QWidget):
             image: Video frame as QImage.
             capture_time: perf_counter() at capture moment (μs precision).
         """
+        # Discard stale frames that arrive after playback has stopped
+        # (queued cross-thread signals may arrive after show_placeholder)
+        if not self._is_playing:
+            return
+        
         self._logger.debug(f"Frame received: {image.width()}x{image.height()}")
         
         import time

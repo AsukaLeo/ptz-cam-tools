@@ -51,6 +51,7 @@ class RTSPTab(QWidget):
 
         # FPS calculation
         self._frame_times: list[float] = []
+        self._is_playing: bool = False
 
         # UI references (filled by _setup_ui)
         self._url_edit: Optional[QLineEdit] = None
@@ -314,6 +315,10 @@ class RTSPTab(QWidget):
             image: Video frame as QImage.
             capture_time: perf_counter() at frame capture time.
         """
+        # Discard stale frames from queued cross-thread signals
+        if not self._is_playing:
+            return
+
         import time
         now = time.perf_counter()
 
@@ -392,6 +397,7 @@ class RTSPTab(QWidget):
         elif state == 'reconnecting':
             self._notify_status("RTSP 断线重连中...")
         elif state == 'connected':
+            self._is_playing = True
             self._notify_status("RTSP 已连接")
             if self._connect_btn:
                 self._connect_btn.setText("已连接")
@@ -406,6 +412,8 @@ class RTSPTab(QWidget):
 
     def _update_ui_stopped(self) -> None:
         """Restore UI to stopped/disconnected state."""
+        self._is_playing = False
+
         # Show placeholder
         if hasattr(self.preview_widget, 'show_placeholder'):
             self.preview_widget.show_placeholder()

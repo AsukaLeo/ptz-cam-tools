@@ -87,6 +87,7 @@ class MainWindow(QMainWindow):
         self._rtsp_tab = RTSPTab()
         self._rtsp_tab.set_video_info_callback(self.update_video_info)
         self._ndi_tab = NDITab()
+        self._ndi_tab.set_video_info_callback(self.update_video_info)
         self._onvif_tab = ONVIFTab()
         self._settings_tab = SettingsTab()
         
