@@ -192,9 +192,19 @@ class USBTab(QWidget):
         for i, d in enumerate(qt_devices):
             self._logger.debug(f"  Qt[{i}]: {d.name}")
         
+        # Build Qt format data for complete format enumeration (Issue #2 fix)
+        qt_formats_by_index = {}
+        for i, qt_dev in enumerate(qt_devices):
+            fmt_list = []
+            for qfmt in qt_dev.video_formats:
+                w, h = qfmt.resolution
+                fmt_list.append((w, h, qfmt.pixel_format, int(qfmt.max_fps)))
+            qt_formats_by_index[i] = fmt_list
+            self._logger.debug(f"  Qt[{i}] {qt_dev.name}: {len(fmt_list)} formats from Qt")
+        
         # Get DirectShow devices (for capture)
         self._logger.debug("Calling DirectShowCapture.enumerate_devices()...")
-        dshow_devices = DirectShowCapture.enumerate_devices()
+        dshow_devices = DirectShowCapture.enumerate_devices(qt_formats_by_index=qt_formats_by_index)
         self._logger.debug(f"DirectShow returned {len(dshow_devices)} device(s):")
         for i, d in enumerate(dshow_devices):
             self._logger.debug(f"  DShow[{i}]: {d.name}")
@@ -392,18 +402,22 @@ class USBTab(QWidget):
         if hasattr(self.preview_widget, 'hide_placeholder'):
             self.preview_widget.hide_placeholder()
         
+        # Disable all controls before starting (Issue #1 fix)
+        self.refresh_btn.setEnabled(False)
+        self.device_combo.setEnabled(False)
+        self.res_combo.setEnabled(False)
+        self.fmt_combo.setEnabled(False)
+        self.fps_combo.setEnabled(False)
+        
         # Start capture
         success = self._dshow_capture.start_capture(device, selected_format)
         
         if success:
             self.play_btn.setText("停止")
-            self.device_combo.setEnabled(False)
-            self.refresh_btn.setEnabled(False)
-            self.res_combo.setEnabled(False)
-            self.fmt_combo.setEnabled(False)
-            self.fps_combo.setEnabled(False)
             self._notify_status("视频播放中")
         else:
+            # Restore controls on failure
+            self._update_ui_stopped()
             self._notify_status("启动视频失败")
     
     def _stop_playback(self) -> None:

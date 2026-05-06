@@ -178,11 +178,14 @@ class DirectShowCapture(QObject):
         self._is_running = False
     
     @staticmethod
-    def enumerate_devices(qt_device_names: dict = None) -> List[DShowDevice]:
+    def enumerate_devices(qt_device_names: dict = None,
+                         qt_formats_by_index: dict = None) -> List[DShowDevice]:
         """Enumerate DirectShow video capture devices.
         
         Args:
             qt_device_names: Optional dict mapping index to device name from Qt.
+            qt_formats_by_index: Optional dict mapping index to list of
+                (width, height, format_type, fps) tuples from Qt enumeration.
         
         Returns:
             List of available capture devices with formats.
@@ -212,7 +215,25 @@ class DirectShowCapture(QObject):
                         name = api_name
                 
                 # Enumerate supported formats
-                formats = DirectShowCapture._enumerate_formats(cap)
+                # Try Qt data first (more complete - Issue #2 fix)
+                if qt_formats_by_index and index in qt_formats_by_index:
+                    formats = []
+                    seen = set()
+                    for w, h, fmt_type, fps in qt_formats_by_index[index]:
+                        key = (w, h, fmt_type)
+                        if key not in seen:
+                            seen.add(key)
+                            formats.append(DShowFormat(
+                                width=w, height=h, fps=fps,
+                                format_type=fmt_type, media_subtype=0
+                            ))
+                    _logger.debug(
+                        "Device %d (%s): %d formats from Qt data",
+                        index, name, len(formats)
+                    )
+                else:
+                    # Fallback: OpenCV-based probe
+                    formats = DirectShowCapture._enumerate_formats(cap)
                 
                 device = DShowDevice(
                     index=index,
