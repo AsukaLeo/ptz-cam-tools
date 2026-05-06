@@ -39,6 +39,7 @@ class PTZPanel(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
+        layout.setAlignment(Qt.AlignTop)
         
         # Title
         title = QLabel("PTZ 控制")

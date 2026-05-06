@@ -48,6 +48,7 @@ class VISCAPanel(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
+        layout.setAlignment(Qt.AlignTop)
         
         # Title
         title = QLabel("VISCA 控制")
