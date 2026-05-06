@@ -15,6 +15,27 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.17.506 — RTSP 拉流（OpenCV FFmpeg 后端）
+
+**Tag**: `V0.17.506` · **Commit**: `placeholder` · **日期**: 2026-05-06
+
+### 功能
+- RTSP 视频流接入：设备发现、URL + 认证 + 传输协议选择
+- 实时视频预览（OpenCV + FFmpeg 后端解码）
+- RTSP 传输协议选择（UDP / TCP）
+- 网卡自动枚举（基于 psutil）
+- 播放/停止状态控制，播放中禁用配置控件
+- 状态栏实时信息：分辨率、帧率、延时、解码方式
+- 断流自动检测 + 自动重连（最多 3 次）
+
+### 新增文件
+- `app/utils/rtsp_capture.py` — RTSP 捕获模块（RTSPSource + RTSPCaptureThread）
+
+### 依赖变更
+- 无新增依赖（基于已有 opencv-python + psutil）
+
+---
+
 ## V 0.16.506 — UI 视觉优化（背景图 + Tab 半透明 + 按钮修复）
 
 **Tag**: `V0.16.506` · **Commit**: `2a319d9` · **日期**: 2026-05-06

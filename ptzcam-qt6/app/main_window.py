@@ -85,6 +85,7 @@ class MainWindow(QMainWindow):
         self._usb_tab = USBTab()
         self._usb_tab.set_video_info_callback(self.update_video_info)
         self._rtsp_tab = RTSPTab()
+        self._rtsp_tab.set_video_info_callback(self.update_video_info)
         self._ndi_tab = NDITab()
         self._onvif_tab = ONVIFTab()
         self._settings_tab = SettingsTab()
