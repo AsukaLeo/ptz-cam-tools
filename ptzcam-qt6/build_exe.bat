@@ -40,7 +40,12 @@ if exist "%UPX_DIR%\upx.exe" (
     echo [INFO] Extract to: %UPX_DIR%
 )
 
+REM Resolve ONVIF WSDL directory (onvif-zeep installs WSDL to site-packages/wsdl/)
+python -c "import onvif; import os; print(os.path.join(os.path.dirname(os.path.dirname(onvif.__file__)), 'wsdl'))" > "%TEMP%\wsdl_path.txt"
+set /p WSDL_DIR=<"%TEMP%\wsdl_path.txt"
+
 echo [INFO] Building PTZ-Cam-Tools.exe...
+echo [INFO] WSDL dir: %WSDL_DIR%
 echo [INFO] This may take a few minutes...
 
 python -m PyInstaller --onefile --windowed ^
@@ -49,6 +54,7 @@ python -m PyInstaller --onefile --windowed ^
     --add-data "assets;assets" ^
     --add-data "arrow_down.svg;." ^
     --add-data "thirdparty/ffmpeg/bin;thirdparty/ffmpeg/bin" ^
+    --add-data "%WSDL_DIR%;wsdl" ^
     --exclude-module "matplotlib" ^
     --exclude-module "PIL" ^
     --exclude-module "scipy" ^
@@ -56,7 +62,6 @@ python -m PyInstaller --onefile --windowed ^
     --exclude-module "notebook" ^
     --exclude-module "jupyter" ^
     --exclude-module "pandas" ^
-    --collect-all "onvif_zeep" ^
     main.py
 
 if errorlevel 1 (

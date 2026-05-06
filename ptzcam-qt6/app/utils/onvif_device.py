@@ -159,6 +159,37 @@ class ONVIFConnection:
         self.is_connected = False
         self._logger = get_logger(__name__)
 
+    @staticmethod
+    def _get_wsdl_dir() -> str:
+        """Get the ONVIF WSDL directory path.
+
+        In PyInstaller frozen builds, WSDL files are bundled under
+        sys._MEIPASS/wsdl/. In normal Python runs, they are in
+        site-packages/wsdl/ (installed by onvif-zeep).
+
+        Returns:
+            Absolute path to the WSDL directory.
+        """
+        import sys as _sys
+        import os as _os
+
+        # PyInstaller: bundled at _MEIPASS/wsdl/
+        if getattr(_sys, 'frozen', False):
+            candidate = _os.path.join(_sys._MEIPASS, 'wsdl')  # type: ignore
+            if _os.path.isdir(candidate):
+                return candidate
+
+        # Normal Python: site-packages/wsdl/ (relative to onvif module)
+        import onvif as _onvif
+        candidate = _os.path.join(
+            _os.path.dirname(_os.path.dirname(_onvif.__file__)), 'wsdl'
+        )
+        if _os.path.isdir(candidate):
+            return candidate
+
+        # Fallback: let ONVIFCamera use its own default
+        return ""
+
     def connect(self, ip: str, port: int = 80,
                 username: str = "", password: str = "",
                 device_info: Optional[ONVIFDeviceInfo] = None) -> bool:
@@ -179,7 +210,9 @@ class ONVIFConnection:
 
             self._logger.info(f"Connecting to ONVIF device: {ip}:{port}")
 
-            self._cam = ONVIFCamera(ip, port, username, password)
+            # Resolve WSDL directory (PyInstaller compatibility)
+            wsdl_dir = self._get_wsdl_dir()
+            self._cam = ONVIFCamera(ip, port, username, password, wsdl_dir)
             self._devicemgmt = self._cam.create_devicemgmt_service()
 
             # Get device info
