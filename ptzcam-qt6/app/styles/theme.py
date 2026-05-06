@@ -34,6 +34,7 @@ def get_global_stylesheet(arrow_svg_path: str) -> str:
         QWidget {{ color: {COLOR_TEXT_MAIN}; }}
         QMainWindow {{ background-color: {COLOR_BG_MAIN}; }}
         QPushButton {{ color: {COLOR_TEXT_MAIN}; background-color: #f5f5f5; }}
+        QPushButton:disabled {{ color: #bbb; background-color: #e8e8e8; border: 1px solid #ddd; }}
         QLabel {{ color: {COLOR_TEXT_MAIN}; background-color: transparent; }}
         QLineEdit {{
             color: {COLOR_TEXT_MAIN}; background-color: {COLOR_BG_MAIN};
@@ -47,6 +48,7 @@ def get_global_stylesheet(arrow_svg_path: str) -> str:
             border: 1px solid {COLOR_BORDER_INPUT}; border-radius: 6px;
             padding: 4px 28px 4px 8px;
         }}
+        QComboBox:disabled {{ color: #bbb; background-color: #f0f0f0; border: 1px solid #ddd; }}
         QComboBox::drop-down {{
             border: none; width: 24px;
             subcontrol-origin: padding;
@@ -196,6 +198,7 @@ def get_primary_button_style() -> str:
         }}
         QPushButton:hover {{ background-color: {COLOR_PRIMARY_HOVER}; }}
         QPushButton:pressed {{ background-color: {COLOR_PRIMARY_PRESSED}; }}
+        QPushButton:disabled {{ background-color: #ccc; color: #eee; border: 1px solid #ccc; }}
     """
 
 
@@ -221,6 +224,7 @@ def get_standard_button_style() -> str:
         }
         QPushButton:hover { background: #e5e5e5; }
         QPushButton:pressed { background: #d5d5d5; }
+        QPushButton:disabled { background: #e8e8e8; color: #bbb; border: 1px solid #ddd; }
     """
 
 
