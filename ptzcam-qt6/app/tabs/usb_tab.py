@@ -16,6 +16,8 @@ from app.utils.dshow_capture import (
 )
 from app.utils.logger import get_logger
 
+import psutil
+
 
 # Import QLabel for frame display
 from PySide6.QtWidgets import QLabel
@@ -59,8 +61,9 @@ class USBTab(QWidget):
         
         self._current_device: Optional[DShowDevice] = None
         self._dshow_devices: list[DShowDevice] = []
-        self._on_video_info: Optional[Callable[[int, int, str, float, int], None]] = None
+        self._on_video_info: Optional[Callable[[int, int, str, float, int, str, float], None]] = None
         self._frame_times: list[float] = []  # For real-time FPS calculation
+        self._cpu_percent: float = 0.0
         
         self._setup_ui()
         self._enumerate_devices()
@@ -474,7 +477,11 @@ class USBTab(QWidget):
         # Report video info (every 10th frame)
         if self._on_video_info and len(self._frame_times) % 10 == 0:
             fmt_name = self.fmt_combo.currentText() if self.fmt_combo.count() > 0 else ""
-            self._on_video_info(image.width(), image.height(), fmt_name, real_fps, latency_ms)
+            # Update CPU usage periodically (psutil.cpu_percent with interval=0 is instant)
+            self._cpu_percent = psutil.cpu_percent(interval=0)
+            decode_method = f"{fmt_name} (OpenCV)"
+            self._on_video_info(image.width(), image.height(), fmt_name,
+                                real_fps, latency_ms, decode_method, self._cpu_percent)
         
         if not self.preview_widget:
             self._logger.warning("No preview widget available")
@@ -587,11 +594,11 @@ class USBTab(QWidget):
         """
         self.on_status_update = callback
     
-    def set_video_info_callback(self, callback: Callable[[int, int, str, float, int], None]) -> None:
+    def set_video_info_callback(self, callback: Callable[[int, int, str, float, int, str, float], None]) -> None:
         """Set callback for video frame info updates.
         
         Args:
-            callback: Function taking (width, height, format_name, fps, latency_ms).
+            callback: Function taking (width, height, format_name, fps, latency_ms, decode_method, cpu_percent).
         """
         self._on_video_info = callback
     

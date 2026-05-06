@@ -239,7 +239,9 @@ class MainWindow(QMainWindow):
     
     def update_video_info(self, width: int, height: int,
                           format_name: str, fps: float,
-                          latency_ms: int = 0) -> None:
+                          latency_ms: int = 0,
+                          decode_method: str = "",
+                          cpu_percent: float = 0.0) -> None:
         """Update video info display in status bar.
         
         Args:
@@ -248,10 +250,20 @@ class MainWindow(QMainWindow):
             format_name: Pixel format name.
             fps: Current frame rate.
             latency_ms: Capture-to-display latency in ms.
+            decode_method: Decoding method description.
+            cpu_percent: Current CPU usage percentage.
         """
-        self.video_info_label.setText(
-            f"  {width}×{height}  |  {format_name}  |  {fps:.1f} fps  |  {latency_ms}ms  "
-        )
+        cpu_str = f"CPU:{cpu_percent:.0f}%" if cpu_percent > 0 else ""
+        parts = [
+            f"{width}×{height}",
+            f"源:{format_name}",
+            f"解码:{decode_method}" if decode_method else "",
+            f"{fps:.1f}fps",
+            f"{latency_ms}ms",
+            cpu_str,
+        ]
+        display = "  |  ".join(p for p in parts if p)
+        self.video_info_label.setText(f"  {display}  ")
     
     def sizeHint(self) -> QSize:
         """Provide recommended window size.
