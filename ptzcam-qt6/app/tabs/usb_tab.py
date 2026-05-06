@@ -64,6 +64,8 @@ class USBTab(QWidget):
         self._on_video_info: Optional[Callable[[int, int, str, float, int, str, float], None]] = None
         self._frame_times: list[float] = []  # For real-time FPS calculation
         self._cpu_percent: float = 0.0
+        self._cpu_process = psutil.Process()  # For per-process CPU monitoring
+        self._last_cpu_update: float = 0.0    # Throttle CPU check to 1s
         
         self._setup_ui()
         self._enumerate_devices()
@@ -474,11 +476,13 @@ class USBTab(QWidget):
             if elapsed > 0:
                 real_fps = (len(self._frame_times) - 1) / elapsed
         
-        # Report video info (every 10th frame)
+        # Report video info (every 10th frame), CPU refreshed at most once per second
         if self._on_video_info and len(self._frame_times) % 10 == 0:
             fmt_name = self.fmt_combo.currentText() if self.fmt_combo.count() > 0 else ""
-            # Update CPU usage periodically (psutil.cpu_percent with interval=0 is instant)
-            self._cpu_percent = psutil.cpu_percent(interval=0)
+            # Refresh CPU at most once per second
+            if time.perf_counter() - self._last_cpu_update >= 1.0:
+                self._cpu_percent = self._cpu_process.cpu_percent(interval=0)
+                self._last_cpu_update = time.perf_counter()
             decode_method = f"{fmt_name} (OpenCV)"
             self._on_video_info(image.width(), image.height(), fmt_name,
                                 real_fps, latency_ms, decode_method, self._cpu_percent)
