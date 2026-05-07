@@ -9,8 +9,8 @@ DEFAULT_WIDTH: int = 960
 DEFAULT_HEIGHT: int = 850
 
 # Version info
-VERSION: str = "0.24.506"
-VERSION_STRING: str = f"V {VERSION}_c27b7af By Asuka"
+VERSION: str = "0.25.507"
+VERSION_STRING: str = f"V {VERSION}_b290e74 By Asuka"
 
 # Colors
 COLOR_BG_MAIN: str = "#fff"
@@ -28,8 +28,8 @@ COLOR_DANGER_PRESSED: str = "#8a1a0d"
 COLOR_TEXT_MAIN: str = "#333"
 COLOR_TEXT_SECONDARY: str = "#555"
 COLOR_TEXT_LABEL: str = "#666"
-COLOR_PREVIEW_BG: str = "#1a1a1a"
-COLOR_VIDEO_FRAME_BG: str = "#0a0a0a"
+COLOR_PREVIEW_BG: str = "rgba(26, 26, 26, 76)"      # ~30% opaque
+COLOR_VIDEO_FRAME_BG: str = "rgba(10, 10, 10, 76)"   # ~30% opaque
 
 # UI strings
 STATUS_READY: str = "就绪"

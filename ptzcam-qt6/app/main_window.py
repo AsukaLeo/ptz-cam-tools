@@ -222,7 +222,7 @@ class MainWindow(QMainWindow):
     
     def _on_tab_changed(self, index: int) -> None:
         """Handle tab selection change.
-        
+
         Args:
             index: Index of the newly selected tab.
         """
@@ -234,13 +234,34 @@ class MainWindow(QMainWindow):
             "未连接",
             "设置",
         ]
-        
+
         status = statuses[index] if index < len(statuses) else STATUS_READY
         self._logger.debug(f"Tab changed to: {tab_names[index] if index < len(tab_names) else 'Unknown'}")
         self.update_status(status)
-        
+
+        # Refresh video info from the active tab's cache
+        if index < len(tab_names):
+            tab = list(self._tab_widgets.values())[index]
+            self._update_video_info_from_tab(tab)
+
         # Update preview sizes after tab switch
         QTimer.singleShot(0, self._update_preview_sizes)
+
+    def _update_video_info_from_tab(self, tab: QWidget) -> None:
+        """Read cached video info from a tab and display it.
+
+        Args:
+            tab: The tab widget to read info from.
+        """
+        if hasattr(tab, 'get_last_video_info'):
+            info = tab.get_last_video_info()
+            if info:
+                self.update_video_info(*info)
+            else:
+                # Clear video info
+                self.update_video_info(0, 0, "", 0.0, 0, "", 0.0)
+        else:
+            self.update_video_info(0, 0, "", 0.0, 0, "", 0.0)
     
     def update_status(self, text: str) -> None:
         """Update the status bar text.

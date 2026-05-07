@@ -68,6 +68,7 @@ class USBTab(QWidget):
         self._cpu_count = psutil.cpu_count()  # Number of logical cores
         self._last_cpu_update: float = 0.0    # Throttle CPU check to 1s
         self._is_playing: bool = False        # Guards against stale frame signals
+        self._last_video_info = (0, 0, "", 0.0, 0, "", 0.0)  # Cached video info
         
         self._setup_ui()
         self._enumerate_devices()
@@ -459,6 +460,7 @@ class USBTab(QWidget):
         # Clear video info display
         self._frame_times.clear()
         self._cpu_percent = 0.0
+        self._last_video_info = (0, 0, "", 0.0, 0, "", 0.0)
         if self._on_video_info:
             self._on_video_info(0, 0, "", 0.0, 0, "", 0.0)
     
@@ -502,7 +504,10 @@ class USBTab(QWidget):
                 self._cpu_percent = raw_cpu / self._cpu_count if self._cpu_count > 0 else raw_cpu
                 self._last_cpu_update = time.perf_counter()
             decode_method = f"{fmt_name} (OpenCV)"
-            self._on_video_info(image.width(), image.height(), fmt_name,
+            w, h = image.width(), image.height()
+            # Cache for tab-switch
+            self._last_video_info = (w, h, fmt_name, real_fps, latency_ms, decode_method, self._cpu_percent)
+            self._on_video_info(w, h, fmt_name,
                                 real_fps, latency_ms, decode_method, self._cpu_percent)
         
         if not self.preview_widget:
@@ -610,11 +615,19 @@ class USBTab(QWidget):
     
     def set_status_callback(self, callback: Callable[[str], None]) -> None:
         """Set the status update callback.
-        
+
         Args:
             callback: Function to call when status needs updating.
         """
         self.on_status_update = callback
+
+    def get_last_video_info(self) -> tuple:
+        """Get the most recently reported video information.
+
+        Returns:
+            Tuple of (width, height, format_name, fps, latency_ms, decode_method, cpu_percent).
+        """
+        return self._last_video_info
     
     def set_video_info_callback(self, callback: Callable[[int, int, str, float, int, str, float], None]) -> None:
         """Set callback for video frame info updates.

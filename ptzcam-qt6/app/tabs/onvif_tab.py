@@ -7,13 +7,14 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFrame,
     QLabel, QPushButton, QComboBox, QLineEdit
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QImage
 
 from app.styles.theme import (
     get_control_card_style, get_primary_button_style,
     get_danger_button_style, get_standard_button_style,
 )
+from app.utils.network_utils import get_nic_choices
 from app.utils.onvif_device import (
     discover_devices, ONVIFConnection, ONVIFDeviceInfo
 )
@@ -59,6 +60,7 @@ class ONVIFTab(QWidget):
         # FPS
         self._frame_times: list[float] = []
         self._is_playing: bool = False
+        self._last_video_info = (0, 0, "", 0.0, 0, "", 0.0)
 
         # UI references
         self._ip_edit: Optional[QLineEdit] = None
@@ -69,6 +71,8 @@ class ONVIFTab(QWidget):
         self._connect_btn: Optional[QPushButton] = None
         self._disconnect_btn: Optional[QPushButton] = None
         self._device_combo: Optional[QComboBox] = None
+        self._net_combo: Optional[QComboBox] = None
+        self._onvif_devices: list[ONVIFDeviceInfo] = []  # Filtered device list
         self._preview_placeholder: Optional[QWidget] = None
 
         self._setup_ui()
@@ -98,6 +102,9 @@ class ONVIFTab(QWidget):
         card_layout.setContentsMargins(12, 10, 12, 10)
         card_layout.setSpacing(6)
 
+        # Center content vertically within the fixed-height card
+        card_layout.addStretch(1)
+
         # --- Row 1: Device discovery ---
         dev_row = QHBoxLayout()
         dev_row.setSpacing(8)
@@ -110,6 +117,7 @@ class ONVIFTab(QWidget):
         self._device_combo = QComboBox()
         self._device_combo.setFixedWidth(320)
         self._device_combo.addItem("(点击发现搜索 ONVIF 设备)")
+        self._device_combo.currentIndexChanged.connect(self._on_device_selected)
         dev_row.addWidget(self._device_combo)
 
         self._discover_btn = QPushButton("发现")
@@ -173,7 +181,37 @@ class ONVIFTab(QWidget):
         detail_row.addStretch()
         card_layout.addLayout(detail_row)
 
+        # --- Row 3: Network interface ---
+        nic_row = QHBoxLayout()
+        nic_row.setSpacing(8)
+
+        nic_label = QLabel("网卡:")
+        nic_label.setFixedWidth(80)
+        nic_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        nic_row.addWidget(nic_label)
+
+        self._net_combo = QComboBox()
+        self._net_combo.setFixedWidth(280)
+        nic_row.addWidget(self._net_combo)
+
+        nic_row.addStretch()
+        card_layout.addLayout(nic_row)
+
+        card_layout.addStretch(1)
+        card.setFixedHeight(120)
+
+        # Populate NIC choices
+        self._refresh_nic_list()
+
         return card
+
+    def _refresh_nic_list(self) -> None:
+        """Refresh the network interface combo box."""
+        if self._net_combo is None:
+            return
+        self._net_combo.clear()
+        for choice in get_nic_choices():
+            self._net_combo.addItem(choice)
 
     def set_preview_widget(self, widget: QWidget) -> None:
         """Set the video preview widget (called by main window).
@@ -188,6 +226,27 @@ class ONVIFTab(QWidget):
             self._preview_placeholder = None
         layout.addWidget(widget, 1)
         self.preview_widget = widget
+
+    # ------------------------------------------------------------------
+    # Device selection auto-fill
+    # ------------------------------------------------------------------
+
+    def _on_device_selected(self, index: int) -> None:
+        """Auto-fill IP/port/user fields when a device is selected.
+
+        Args:
+            index: Index of the selected device in the combo.
+        """
+        if index < 0 or not self._onvif_devices or index >= len(self._onvif_devices):
+            return
+
+        device = self._onvif_devices[index]
+        if self._ip_edit:
+            self._ip_edit.setText(device.ip)
+        if self._port_edit:
+            self._port_edit.setText(str(device.port))
+        if self._user_edit:
+            self._user_edit.setText("admin")
 
     # ------------------------------------------------------------------
     # Discovery
@@ -206,22 +265,25 @@ class ONVIFTab(QWidget):
     def _do_discover(self) -> None:
         """Perform actual WS-Discovery scan."""
         self._logger.info("Starting ONVIF discovery")
-        self._discovered_devices = discover_devices(3000)
+        self._discovered_devices = discover_devices(5000)  # 5s timeout for reliability
 
         # Filter to only ONVIF video devices
-        onvif_devices = [
+        self._onvif_devices = [
             d for d in self._discovered_devices
             if "onvif" in d.xaddr.lower() and d.ip
         ]
 
         if self._device_combo:
             self._device_combo.clear()
-            if onvif_devices:
-                for d in onvif_devices:
+            if self._onvif_devices:
+                for d in self._onvif_devices:
                     label = f"{d.display_name()}  ({d.ip}:{d.port})"
                     self._device_combo.addItem(label)
                 self._connect_btn.setEnabled(True)
-                self._notify_status(f"发现 {len(onvif_devices)} 个 ONVIF 设备")
+                # Auto-select first device to populate fields
+                self._device_combo.setCurrentIndex(0)
+                self._on_device_selected(0)
+                self._notify_status(f"发现 {len(self._onvif_devices)} 个 ONVIF 设备")
             else:
                 self._device_combo.addItem("(未发现 ONVIF 设备)")
                 self._notify_status("未发现 ONVIF 设备")
@@ -267,27 +329,50 @@ class ONVIFTab(QWidget):
         )
 
         if not success:
-            self._notify_status("ONVIF 连接失败")
+            # Show specific error from ONVIF connection
+            err_msg = self._onvif_conn.get_last_error() if self._onvif_conn else ""
+            display = err_msg if err_msg else "ONVIF 连接失败"
+            self._logger.error(f"ONVIF connection failed: {display}")
+            self._notify_status(display)
+            self._onvif_conn = None
             self._update_ui_stopped()
             return
 
         # Get RTSP URL
         rtsp_url = self._onvif_conn.get_rtsp_url()
         if not rtsp_url:
-            self._notify_status("ONVIF 已连接，但无法获取 RTSP 流")
+            # Check if there was an auth error along the way
+            err_msg = self._onvif_conn.get_last_error()
+            msg = err_msg if err_msg else "ONVIF 已连接，但无法获取 RTSP 流地址"
+            self._notify_status(msg)
+            self._logger.warning(f"RTSP URL not available: {msg}")
+            self._onvif_conn.disconnect()
+            self._onvif_conn = None
+            self._update_ui_stopped()
             return
 
         self._last_rtsp_url = rtsp_url
         self._logger.info(f"ONVIF connected, RTSP: {rtsp_url}")
 
+        # Show a status message if auto-discovered credentials were used
+        if self._onvif_conn:
+            cred_msg = self._onvif_conn.get_last_error()
+            if cred_msg and "默认凭据连接成功" in cred_msg:
+                self._notify_status(cred_msg)
+
         # Embed authentication into RTSP URL
-        # Always embed when username is provided (even empty password)
-        # OpenCV FFmpeg needs rtsp://user:pass@host format for auth
-        if username:
+        # Use working credentials from the ONVIF connection (may be auto-discovered
+        # default creds rather than what user typed)
+        if self._onvif_conn:
+            rtsp_user, rtsp_pass = self._onvif_conn.get_working_credentials()
+        else:
+            rtsp_user, rtsp_pass = username, password
+
+        if rtsp_user:
             if rtsp_url.startswith("rtsp://"):
-                rtsp_url = f"rtsp://{username}:{password}@{rtsp_url[7:]}"
+                rtsp_url = f"rtsp://{rtsp_user}:{rtsp_pass}@{rtsp_url[7:]}"
             else:
-                rtsp_url = f"rtsp://{username}:{password}@{rtsp_url}"
+                rtsp_url = f"rtsp://{rtsp_user}:{rtsp_pass}@{rtsp_url}"
 
         # Hide preview placeholder
         if hasattr(self.preview_widget, 'hide_placeholder'):
@@ -335,8 +420,10 @@ class ONVIFTab(QWidget):
                 real_fps = (len(self._frame_times) - 1) / elapsed
 
         if self._on_video_info and len(self._frame_times) % 10 == 0:
+            w, h = image.width(), image.height()
+            self._last_video_info = (w, h, "H264", real_fps, latency_ms, "ONVIF (RTSP)", 0.0)
             self._on_video_info(
-                image.width(), image.height(),
+                w, h,
                 "H264", real_fps, latency_ms,
                 "ONVIF (RTSP)", 0.0
             )
@@ -406,6 +493,7 @@ class ONVIFTab(QWidget):
             self._disconnect_btn.setEnabled(False)
 
         self._frame_times.clear()
+        self._last_video_info = (0, 0, "", 0.0, 0, "", 0.0)
         if self._on_video_info:
             self._on_video_info(0, 0, "", 0.0, 0, "", 0.0)
 
@@ -416,7 +504,8 @@ class ONVIFTab(QWidget):
             enabled: True to enable, False to disable.
         """
         for w in [self._ip_edit, self._port_edit, self._user_edit,
-                  self._pass_edit, self._device_combo, self._discover_btn]:
+                  self._pass_edit, self._device_combo, self._discover_btn,
+                  self._net_combo]:
             if w:
                 w.setEnabled(enabled)
 
@@ -444,3 +533,11 @@ class ONVIFTab(QWidget):
             callback: Video info callback function.
         """
         self._on_video_info = callback
+
+    def get_last_video_info(self) -> tuple:
+        """Get the most recently reported video information.
+
+        Returns:
+            Tuple of (width, height, format, fps, latency, decode, cpu).
+        """
+        return self._last_video_info

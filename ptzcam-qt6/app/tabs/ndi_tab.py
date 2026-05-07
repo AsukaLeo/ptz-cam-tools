@@ -14,6 +14,7 @@ from app.styles.theme import (
     get_control_card_style, get_primary_button_style,
     get_danger_button_style, get_standard_button_style,
 )
+from app.utils.network_utils import get_nic_choices
 from app.utils.ndi_capture import NDISourceFinder, NDICapture, NDISource
 from app.utils.logger import get_logger
 
@@ -54,9 +55,11 @@ class NDITab(QWidget):
         # FPS calculation
         self._frame_times: list[float] = []
         self._is_playing: bool = False
+        self._last_video_info = (0, 0, "", 0.0, 0, "", 0.0)
 
         # UI references
         self._src_combo: Optional[QComboBox] = None
+        self._net_combo: Optional[QComboBox] = None
         self._refresh_btn: Optional[QPushButton] = None
         self._connect_btn: Optional[QPushButton] = None
         self._disconnect_btn: Optional[QPushButton] = None
@@ -88,6 +91,9 @@ class NDITab(QWidget):
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(12, 10, 12, 10)
         card_layout.setSpacing(6)
+
+        # Center content vertically within the fixed-height card
+        card_layout.addStretch(1)
 
         # Source row
         src_row = QHBoxLayout()
@@ -123,7 +129,37 @@ class NDITab(QWidget):
         src_row.addStretch()
         card_layout.addLayout(src_row)
 
+        # NIC row
+        nic_row = QHBoxLayout()
+        nic_row.setSpacing(8)
+
+        nic_label = QLabel("网卡:")
+        nic_label.setFixedWidth(80)
+        nic_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        nic_row.addWidget(nic_label)
+
+        self._net_combo = QComboBox()
+        self._net_combo.setFixedWidth(280)
+        nic_row.addWidget(self._net_combo)
+
+        nic_row.addStretch()
+        card_layout.addLayout(nic_row)
+
+        card_layout.addStretch(1)
+        card.setFixedHeight(120)
+
+        # Populate NIC choices
+        self._refresh_nic_list()
+
         return card
+
+    def _refresh_nic_list(self) -> None:
+        """Refresh the network interface combo box."""
+        if self._net_combo is None:
+            return
+        self._net_combo.clear()
+        for choice in get_nic_choices():
+            self._net_combo.addItem(choice)
 
     def set_preview_widget(self, widget: QWidget) -> None:
         """Set the video preview widget (called by main window).
@@ -253,8 +289,10 @@ class NDITab(QWidget):
 
         # Report video info every 10 frames
         if self._on_video_info and len(self._frame_times) % 10 == 0:
+            w, h = image.width(), image.height()
+            self._last_video_info = (w, h, "BGRA", real_fps, latency_ms, "NDI (SDK v6)", 0.0)
             self._on_video_info(
-                image.width(), image.height(),
+                w, h,
                 "BGRA", real_fps, latency_ms,
                 "NDI (SDK v6)", 0.0
             )
@@ -329,6 +367,7 @@ class NDITab(QWidget):
             self._disconnect_btn.setEnabled(False)
 
         self._frame_times.clear()
+        self._last_video_info = (0, 0, "", 0.0, 0, "", 0.0)
         if self._on_video_info:
             self._on_video_info(0, 0, "", 0.0, 0, "", 0.0)
 
@@ -342,6 +381,8 @@ class NDITab(QWidget):
             self._src_combo.setEnabled(enabled)
         if self._refresh_btn:
             self._refresh_btn.setEnabled(enabled)
+        if self._net_combo:
+            self._net_combo.setEnabled(enabled)
 
     def _notify_status(self, message: str) -> None:
         """Send status update to the main window status bar.
@@ -367,3 +408,11 @@ class NDITab(QWidget):
             callback: Video info callback function.
         """
         self._on_video_info = callback
+
+    def get_last_video_info(self) -> tuple:
+        """Get the most recently reported video information.
+
+        Returns:
+            Tuple of (width, height, format, fps, latency, decode, cpu).
+        """
+        return self._last_video_info

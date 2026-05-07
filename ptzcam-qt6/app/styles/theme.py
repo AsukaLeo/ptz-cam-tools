@@ -56,6 +56,12 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             border: 1px solid {COLOR_BORDER_INPUT}; border-radius: 6px;
             padding: 4px 8px;
         }}
+        QLineEdit:disabled {{
+            color: #aaa; background-color: #e8e8e8; border: 1px solid #ddd;
+        }}
+        QLineEdit:focus {{
+            border-color: {COLOR_PRIMARY};
+        }}
 
         /* ── ComboBox：使用 SVG 标准箭头 ── */
         QComboBox {{

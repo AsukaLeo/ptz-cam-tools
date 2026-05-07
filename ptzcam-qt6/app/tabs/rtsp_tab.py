@@ -7,12 +7,13 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFrame,
     QLabel, QPushButton, QComboBox, QLineEdit
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QEvent, QTimer
 from PySide6.QtGui import QImage
 
 from app.styles.theme import (
     get_control_card_style, get_primary_button_style, get_danger_button_style
 )
+from app.utils.network_utils import get_nic_choices
 from app.utils.rtsp_capture import RTSPSource
 from app.utils.logger import get_logger
 
@@ -52,6 +53,7 @@ class RTSPTab(QWidget):
         # FPS calculation
         self._frame_times: list[float] = []
         self._is_playing: bool = False
+        self._last_video_info = (0, 0, "", 0.0, 0, "", 0.0)
 
         # UI references (filled by _setup_ui)
         self._url_edit: Optional[QLineEdit] = None
@@ -104,6 +106,7 @@ class RTSPTab(QWidget):
 
         self._url_edit = QLineEdit("rtsp://192.168.2.254/PSIA/Streaming/channels/h264")
         self._url_edit.setFixedWidth(350)
+        self._setup_line_edit(self._url_edit)
         url_row.addWidget(self._url_edit)
 
         self._connect_btn = QPushButton("连接")
@@ -132,6 +135,7 @@ class RTSPTab(QWidget):
         self._user_edit = QLineEdit()
         self._user_edit.setPlaceholderText("admin")
         self._user_edit.setFixedWidth(120)
+        self._setup_line_edit(self._user_edit)
         auth_row.addWidget(self._user_edit)
 
         pass_label = QLabel("密码:")
@@ -141,6 +145,7 @@ class RTSPTab(QWidget):
         self._pass_edit = QLineEdit()
         self._pass_edit.setEchoMode(QLineEdit.Password)
         self._pass_edit.setFixedWidth(120)
+        self._setup_line_edit(self._pass_edit)
         auth_row.addWidget(self._pass_edit)
 
         auth_row.addStretch()
@@ -187,74 +192,48 @@ class RTSPTab(QWidget):
         layout.addWidget(widget, 1)
         self.preview_widget = widget
 
-    @staticmethod
-    def _is_physical_nic(name: str) -> bool:
-        """Check if a network interface name corresponds to a physical NIC.
-
-        Filters out virtual adapters (VMware, Hyper-V, Docker, VPN, etc.)
-        by matching against known virtual adapter keywords.
-
-        Args:
-            name: Network interface name.
-
-        Returns:
-            True if the interface appears to be a physical NIC.
-        """
-        name_lower = name.lower()
-        virtual_keywords = [
-            # English
-            'vmware', 'vmnet', 'virtualbox', 'vbox',
-            'hyper-v', 'v ethernet', 'default switch',
-            'docker', 'veth', 'br-',
-            'bluetooth', 'bluetooh',
-            'loopback', 'isatap', '6to4',
-            'tap-', 'tap-windows',
-            'openvpn', 'tun-', 'tun0',
-            'npcap', 'npcappacket',
-            'pseudo', 'virtual',
-            'microsoft wi-fi direct',
-            'localhost', 'software',
-            'wsl',
-            # Chinese (for localized Windows)
-            '蓝牙', '虚拟', '回环', '隧道', '本地连接',
-        ]
-        for kw in virtual_keywords:
-            if kw in name_lower:
-                return False
-        return True
-
     def _enumerate_network_interfaces(self) -> None:
-        """Enumerate physical network interfaces using psutil.
+        """Enumerate physical network interfaces using shared utility.
 
         Populates the network interface combo box with physical adapter
-        names and their associated IPv4 addresses. Virtual adapters
-        (VMware, Hyper-V, Docker, VPN, etc.) are filtered out.
+        names and all associated IPv4 addresses.
         """
         if self._net_combo is None:
             return
 
         self._net_combo.clear()
+        choices = get_nic_choices()
+        for choice in choices:
+            self._net_combo.addItem(choice)
 
-        try:
-            import psutil
-            addrs = psutil.net_if_addrs()
-        except ImportError:
-            self._net_combo.addItem("psutil not available")
-            return
+    # ------------------------------------------------------------------
+    # Line edit helpers
+    # ------------------------------------------------------------------
 
-        found = False
-        for iface_name, snic_list in addrs.items():
-            if not self._is_physical_nic(iface_name):
-                continue
-            for snic in snic_list:
-                # Only show IPv4 addresses
-                if snic.family.name == 'AF_INET' if hasattr(snic.family, 'name') else snic.family == 2:
-                    self._net_combo.addItem(f"{iface_name} - {snic.address}")
-                    found = True
-                    break
+    def _setup_line_edit(self, edit: QLineEdit) -> None:
+        """Configure a line edit with clear button and select-all on focus.
 
-        if not found:
-            self._net_combo.addItem("(未检测到网卡)")
+        Args:
+            edit: QLineEdit to configure.
+        """
+        edit.setClearButtonEnabled(True)
+        edit.installEventFilter(self)
+
+    def eventFilter(self, obj, event) -> bool:
+        """Handle events for line edits: select all on focus in.
+
+        Args:
+            obj: Object the event was sent to.
+            event: Event object.
+
+        Returns:
+            True if the event was handled, False otherwise.
+        """
+        if event.type() == QEvent.FocusIn:
+            if obj in (self._url_edit, self._user_edit, self._pass_edit):
+                # Defer selectAll to let the event loop finish first
+                QTimer.singleShot(0, obj.selectAll)
+        return super().eventFilter(obj, event)
 
     def _connect_rtsp(self) -> None:
         """Establish RTSP connection.
@@ -339,8 +318,10 @@ class RTSPTab(QWidget):
 
         # Report video info periodically (every 10 frames)
         if self._on_video_info and len(self._frame_times) % 10 == 0:
+            w, h = image.width(), image.height()
+            self._last_video_info = (w, h, "H264", real_fps, latency_ms, "H264 (FFmpeg)", 0.0)
             self._on_video_info(
-                image.width(), image.height(),
+                w, h,
                 "H264", real_fps, latency_ms,
                 "H264 (FFmpeg)", 0.0
             )
@@ -430,6 +411,7 @@ class RTSPTab(QWidget):
 
         # Clear video info
         self._frame_times.clear()
+        self._last_video_info = (0, 0, "", 0.0, 0, "", 0.0)
         if self._on_video_info:
             self._on_video_info(0, 0, "", 0.0, 0, "", 0.0)
 
@@ -477,3 +459,11 @@ class RTSPTab(QWidget):
             callback: Video info callback function.
         """
         self._on_video_info = callback
+
+    def get_last_video_info(self) -> tuple:
+        """Get the most recently reported video information.
+
+        Returns:
+            Tuple of (width, height, format, fps, latency, decode, cpu).
+        """
+        return self._last_video_info

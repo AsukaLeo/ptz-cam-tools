@@ -12,6 +12,31 @@ from app.utils.logger import get_logger
 
 _logger = get_logger(__name__)
 
+# Common ONVIF default credentials to try when auth fails.
+# Format: list of (username, password) tuples.
+_COMMON_CREDENTIALS: list[tuple[str, str]] = [
+    ("admin", "9999"),   # User's specific camera
+    ("admin", ""),
+    ("admin", "admin"),
+    ("admin", "12345"),
+    ("admin", "password"),
+    ("admin", "Admin123"),
+    ("admin", "Admin@123"),
+    ("admin", "123456"),
+    ("admin", "111111"),
+    ("admin", "888888"),
+    ("admin", "1234"),
+    ("root", ""),
+    ("root", "pass"),
+    ("root", "root"),
+    ("Administrator", ""),
+    ("Administrator", "admin"),
+    ("user", "user"),
+    ("guest", ""),
+    ("guest", "guest"),
+    ("", ""),
+]
+
 
 @dataclass
 class ONVIFDeviceInfo:
@@ -139,6 +164,97 @@ def _parse_xaddr(xaddr: str) -> tuple:
 # Connection
 # ---------------------------------------------------------------------------
 
+_RTSP_FALLBACK_PATHS = [
+    # Standard ONVIF
+    "/onvif/media?profile=Profile_1&transportmode=unicast",
+    "/onvif/media?profile=Profile_1",
+    "/onvif/profile.1",
+    "/onvif/media",
+    "/onvif/live",
+    # Hikvision
+    "/Streaming/Channels/101",
+    "/Streaming/Channels/1",
+    # Dahua
+    "/cam/realmonitor?channel=1&subtype=0",
+    "/cam/realmonitor?channel=1&subtype=1",
+    "/h264/ch1/main/av_stream",
+    "/h264/ch1/sub/av_stream",
+    # Common
+    "/live/ch0",
+    "/live/main",
+    "/h264",
+    "/h264_1",
+    "/video",
+    "/video1",
+    "/video2",
+    "/media",
+    "/live",
+    "/live/sub",
+    "/mpeg4/ch1/main/av_stream",
+    "/ch1/main/h264",
+    "/11",
+    "/media/video",
+    "/",
+]
+
+
+def _get_fallback_rtsp_urls(ip: str, onvif_port: int) -> list[str]:
+    """Generate common RTSP URL fallback patterns for cameras.
+
+    Args:
+        ip: Device IP address.
+        onvif_port: ONVIF HTTP port (used to guess RTSP port).
+
+    Returns:
+        List of candidate RTSP URLs ordered by likelihood.
+    """
+    # RTSP 几乎总是用 554 或 8554 端口，不要用 ONVIF HTTP 端口
+    rtsp_ports = [554, 8554]
+
+    urls: list[str] = []
+    for rport in rtsp_ports:
+        for path in _RTSP_FALLBACK_PATHS:
+            urls.append(f"rtsp://{ip}:{rport}{path}")
+
+    return urls
+
+
+def _is_auth_error(exception: Exception) -> bool:
+    """Check if an exception is caused by authentication failure.
+
+    Args:
+        exception: The exception to check.
+
+    Returns:
+        True if the exception indicates an auth/authorization error.
+    """
+    err = str(exception).lower()
+    keywords = [
+        "not authorized", "unauthorized", "sender not authorized",
+        "auth failure", "authentication failed", "access denied",
+        "401", "403",
+    ]
+    return any(kw in err for kw in keywords)
+
+
+def _is_auth_error_str(error_message: str) -> bool:
+    """Check if an error message string indicates authentication failure.
+
+    Args:
+        error_message: The error message to check.
+
+    Returns:
+        True if the message indicates an auth/authorization error.
+    """
+    err = error_message.lower()
+    keywords = [
+        "not authorized", "unauthorized", "sender not authorized",
+        "auth failure", "authentication failed", "access denied",
+        "401", "403",
+    ]
+    return any(kw in err for kw in keywords)
+
+
 class ONVIFConnection:
     """Manages an ONVIF device connection.
 
@@ -157,7 +273,26 @@ class ONVIFConnection:
         self._devicemgmt = None
         self.device_info: Optional[ONVIFDeviceInfo] = None
         self.is_connected = False
+        self._last_error: str = ""
+        self._working_username: str = ""
+        self._working_password: str = ""
         self._logger = get_logger(__name__)
+
+    def get_last_error(self) -> str:
+        """Get the last error message.
+
+        Returns:
+            Error description string, or empty string if no error.
+        """
+        return self._last_error
+
+    def get_working_credentials(self) -> tuple[str, str]:
+        """Get the credentials that successfully connected.
+
+        Returns:
+            Tuple of (username, password) that worked, or ("","") if not connected.
+        """
+        return (self._working_username, self._working_password)
 
     @staticmethod
     def _get_wsdl_dir() -> str:
@@ -205,56 +340,144 @@ class ONVIFConnection:
         Returns:
             True if connected successfully.
         """
-        try:
-            from onvif import ONVIFCamera
+        # Try user-provided credentials first, then fall back to common defaults
+        all_credentials: list[tuple[str, str, str]] = []
 
-            self._logger.info(f"Connecting to ONVIF device: {ip}:{port}")
+        # User credentials (first attempt)
+        all_credentials.append(("user", username, password))
 
-            # Resolve WSDL directory (PyInstaller compatibility)
-            wsdl_dir = self._get_wsdl_dir()
-            self._cam = ONVIFCamera(ip, port, username, password, wsdl_dir)
-            self._devicemgmt = self._cam.create_devicemgmt_service()
+        # Common defaults to try if user credentials fail
+        if username or password:
+            # If user entered something, still try defaults as fallback
+            for u, p in _COMMON_CREDENTIALS:
+                if (u, p) != (username, password):
+                    all_credentials.append(("default", u, p))
+        else:
+            # User entered nothing, try all defaults
+            for u, p in _COMMON_CREDENTIALS:
+                all_credentials.append(("default", u, p))
 
-            # Get device info
-            info = self.device_info or ONVIFDeviceInfo(ip=ip, port=port)
+        last_error = ""
+        for cred_type, try_user, try_pass in all_credentials:
             try:
-                device_info_resp = self._devicemgmt.GetDeviceInformation()
-                info.manufacturer = getattr(device_info_resp, 'Manufacturer', '')
-                info.model = getattr(device_info_resp, 'Model', '')
-                info.firmware = getattr(device_info_resp, 'FirmwareVersion', '')
-                info.serial = getattr(device_info_resp, 'SerialNumber', '')
-                info.hardware = getattr(device_info_resp, 'HardwareId', '')
-            except Exception as e:
-                self._logger.warning(f"Could not get device info: {e}")
+                from onvif import ONVIFCamera
 
-            # Create media service and get RTSP URL
-            try:
-                self._media = self._cam.create_media_service()
-                profiles = self._media.GetProfiles()
+                self._logger.info(
+                    f"Trying credentials [{cred_type}] {try_user}:***@{ip}:{port}"
+                )
+
+                wsdl_dir = self._get_wsdl_dir()
+                self._cam = ONVIFCamera(ip, port, try_user, try_pass, wsdl_dir)
+                self._devicemgmt = self._cam.create_devicemgmt_service()
+
+                # Try to get device info (fails if auth is wrong)
+                info = device_info or ONVIFDeviceInfo(ip=ip, port=port)
+                try:
+                    device_info_resp = self._devicemgmt.GetDeviceInformation()
+                    info.manufacturer = getattr(device_info_resp, 'Manufacturer', '')
+                    info.model = getattr(device_info_resp, 'Model', '')
+                    info.firmware = getattr(device_info_resp, 'FirmwareVersion', '')
+                    info.serial = getattr(device_info_resp, 'SerialNumber', '')
+                    info.hardware = getattr(device_info_resp, 'HardwareId', '')
+                except Exception:
+                    # Device info failed - might still work for media
+                    pass
+
+                # Try to create media service and get profiles
+                try:
+                    self._media = self._cam.create_media_service()
+                    profiles = self._media.GetProfiles()
+                    profile_count = len(profiles) if profiles else 0
+                    self._logger.info(
+                        f"Credentials OK: {try_user}:*** ({profile_count} profiles)"
+                    )
+                except Exception as e:
+                    if _is_auth_error(e):
+                        last_error = str(e)
+                        # Clean up and try next credential
+                        self._cam = None
+                        self._devicemgmt = None
+                        continue
+                    # Non-auth error (service not available, etc.) - try next
+                    self._cam = None
+                    self._devicemgmt = None
+                    continue
+
+                # Success! Credentials worked
+                self._logger.info(
+                    f"ONVIF connected to {ip}:{port} with {try_user}:***"
+                )
+
+                # If we used a default credential (not the user's input),
+                # inform the caller via last_error
+                if cred_type == "default":
+                    self._last_error = (
+                        f"设备 {ip}:{port} 使用默认凭据连接成功 "
+                        f"(用户名: {try_user}, 密码: {try_pass})"
+                    )
+
+                # Save the working credentials
+                self._working_username = try_user
+                self._working_password = try_pass
+
+                # Get RTSP URL from profiles
                 if profiles:
-                    profile_token = profiles[0].token
-                    stream_uri = self._media.GetStreamUri({
-                        'StreamSetup': {
-                            'Stream': 'RTP-Unicast',
-                            'Transport': {'Protocol': 'RTSP'}
-                        },
-                        'ProfileToken': profile_token
-                    })
-                    info.rtsp_url = stream_uri.Uri
-                    self._logger.info(f"RTSP URL: {info.rtsp_url}")
+                    for profile in profiles:
+                        try:
+                            stream_uri = self._media.GetStreamUri({
+                                'StreamSetup': {
+                                    'Stream': 'RTP-Unicast',
+                                    'Transport': {'Protocol': 'RTSP'}
+                                },
+                                'ProfileToken': profile.token
+                            })
+                            uri = stream_uri.Uri
+                            if uri:
+                                info.rtsp_url = uri
+                                self._logger.info(
+                                    f"RTSP URL from profile {profile.token}: {uri}"
+                                )
+                                break
+                        except Exception as e:
+                            self._logger.debug(
+                                f"Profile {profile.token} failed: {e}"
+                            )
+                            continue
+
+                # Fallback RTSP URL
+                if not info.rtsp_url and ip:
+                    self._logger.info("Trying fallback RTSP URL patterns...")
+                    fallback_urls = _get_fallback_rtsp_urls(ip, port)
+                    for fb_url in fallback_urls:
+                        info.rtsp_url = fb_url
+                        break
+
+                self.device_info = info
+                self.is_connected = True
+                return True
+
+            except ImportError:
+                self._last_error = "onvif-zeep 库未安装"
+                self._logger.error("onvif-zeep not installed")
+                return False
             except Exception as e:
-                self._logger.warning(f"Could not get RTSP URL: {e}")
+                last_error = str(e)
+                self._logger.debug(
+                    f"Credentials [{cred_type}] failed: {e}"
+                )
+                self._cam = None
+                self._devicemgmt = None
+                continue
 
-            self.device_info = info
-            self.is_connected = True
-            return True
-
-        except ImportError:
-            self._logger.error("onvif-zeep not installed")
-            return False
-        except Exception as e:
-            self._logger.error(f"ONVIF connection error: {e}")
-            return False
+        # All credentials failed
+        self._last_error = (
+            f"ONVIF 认证失败：无法连接设备 {ip}:{port}，"
+            "已尝试常用默认凭据均未成功。"
+            if _is_auth_error_str(last_error)
+            else f"ONVIF 连接失败: {last_error}"
+        )
+        self._logger.error(self._last_error)
+        return False
 
     def disconnect(self) -> None:
         """Disconnect from the device."""
