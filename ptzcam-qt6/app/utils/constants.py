@@ -33,8 +33,6 @@ COLOR_VIDEO_FRAME_BG: str = "transparent"              # inherit container bg
 
 # UI strings
 STATUS_READY: str = "就绪"
-STATUS_CONNECTING: str = "连接中..."
-STATUS_DISCONNECTED: str = "已断开"
 
 # Tab names
 TAB_USB: str = "USB"
@@ -42,18 +40,6 @@ TAB_RTSP: str = "RTSP"
 TAB_NDI: str = "NDI"
 TAB_ONVIF: str = "ONVIF"
 TAB_SETTINGS: str = "设置"
-
-# PTZ directions
-PTZ_UP: str = "上"
-PTZ_DOWN: str = "下"
-PTZ_LEFT: str = "左"
-PTZ_RIGHT: str = "右"
-PTZ_STOP: str = "停止"
-PTZ_HOME: str = "Home"
-
-# VISCA
-VISCA_SERIAL_OPENED: str = "VISCA 串口已开启"
-VISCA_NETWORK_CONNECTED: str = "VISCA 网络已连接"
 
 # Video preview
 PREVIEW_PLACEHOLDER_TEXT: str = "视频预览区"

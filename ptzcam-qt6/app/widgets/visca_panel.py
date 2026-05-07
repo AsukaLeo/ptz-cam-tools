@@ -230,27 +230,18 @@ class VISCAPanel(QFrame):
         self._tilt_reverse_cb = QCheckBox("方向反转")
         self._tilt_reverse_cb.setChecked(True)
         self._tilt_reverse_cb.setToolTip("部分 VISCA 协议上下方向相反时取消勾选")
-        # Resolve assets path for both dev and PyInstaller builds
-        import sys as _sys
-        import os as _os
-        if getattr(_sys, 'frozen', False):
-            _assets_dir = _os.path.join(_sys._MEIPASS, 'assets')
-        else:
-            _assets_dir = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), 'assets')
-        _check_on = _os.path.join(_assets_dir, 'check_on.svg').replace('\\', '/')
-        self._tilt_reverse_cb.setStyleSheet(f"""
-            QCheckBox {{
+        self._tilt_reverse_cb.setStyleSheet("""
+            QCheckBox {
                 color: #555; font-size: 11px; background: transparent;
                 spacing: 4px;
-            }}
-            QCheckBox::indicator {{
+            }
+            QCheckBox::indicator {
                 border: 1px solid #888; border-radius: 2px;
                 width: 14px; height: 14px; background: #fff;
-            }}
-            QCheckBox::indicator:checked {{
+            }
+            QCheckBox::indicator:checked {
                 background: #fff; border-color: #1976d2;
-                image: url({_check_on});
-            }}
+            }
         """)
         self._tilt_reverse_cb.stateChanged.connect(self._on_tilt_reverse_changed)
         grid.addWidget(self._tilt_reverse_cb, 2, 0, 1, 2)
