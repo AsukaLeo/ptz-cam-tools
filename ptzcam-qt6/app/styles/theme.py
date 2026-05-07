@@ -23,30 +23,46 @@ from app.utils.constants import (
 )
 
 
+# ---------------------------------------------------------------------------
+# Global stylesheet (assembled from themed sections)
+# ---------------------------------------------------------------------------
+
 def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
     """Generate the global application stylesheet.
-    
+
     Args:
         arrow_svg_path: Path to the ComboBox dropdown arrow SVG file.
         bg_image_path: Optional path to background image.
-        
+
     Returns:
         Complete stylesheet string.
     """
-    # Background rule
+    return "".join([
+        _bg_section(bg_image_path),
+        _base_widget_section(),
+        _combo_box_section(arrow_svg_path),
+        _status_bar_section(),
+        _tab_section(),
+        _size_grip_section(),
+    ])
+
+
+def _bg_section(bg_image_path: str) -> str:
+    """Main window background (image or solid color)."""
     if bg_image_path and os.path.exists(bg_image_path):
-        bg_rule = f"""
+        return f"""
         QMainWindow {{
             border-image: url({bg_image_path}) 0 0 0 0 stretch stretch;
         }}
         """
-    else:
-        bg_rule = f"""
+    return f"""
         QMainWindow {{ background-color: {COLOR_BG_MAIN}; }}
         """
-    
+
+
+def _base_widget_section() -> str:
+    """Base widgets: QWidget, QPushButton, QLabel, QLineEdit."""
     return f"""
-        {bg_rule}
         QWidget {{ color: {COLOR_TEXT_MAIN}; background: transparent; }}
         QPushButton {{ color: {COLOR_TEXT_MAIN}; background-color: #f5f5f5; }}
         QPushButton:disabled {{ color: #bbb; background-color: #e8e8e8; border: 1px solid #ddd; }}
@@ -62,8 +78,12 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
         QLineEdit:focus {{
             border-color: {COLOR_PRIMARY};
         }}
+        """
 
-        /* ── ComboBox：使用 SVG 标准箭头 ── */
+
+def _combo_box_section(arrow_svg_path: str) -> str:
+    """QComboBox with SVG arrow and scrollable dropdown."""
+    return f"""
         QComboBox {{
             color: {COLOR_TEXT_MAIN}; background-color: {COLOR_BG_MAIN};
             border: 1px solid {COLOR_BORDER_INPUT}; border-radius: 6px;
@@ -104,7 +124,12 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
         QComboBox QAbstractItemView QScrollBar::sub-line:vertical {{ height: 0px; }}
         QComboBox QAbstractItemView QScrollBar::add-page:vertical,
         QComboBox QAbstractItemView QScrollBar::sub-page:vertical {{ background: none; }}
+        """
 
+
+def _status_bar_section() -> str:
+    """QStatusBar and QListWidget styling."""
+    return f"""
         QStatusBar {{ color: {COLOR_TEXT_MAIN}; background-color: #f0f0f0; }}
         QStatusBar QLabel {{ color: {COLOR_TEXT_SECONDARY}; background-color: transparent; }}
         QListWidget {{
@@ -112,13 +137,13 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             border: 1px solid {COLOR_BORDER_INPUT}; border-radius: 6px;
         }}
         QListWidget::item:selected {{ background-color: {COLOR_PRIMARY}; color: {COLOR_BG_MAIN}; }}
+        """
 
-        /* ── QTabWidget 去掉默认边框 ── */
-        QTabWidget {{
-            border: none;
-        }}
 
-        /* ── Tab 样式：70%半透明，背景图可透出 ── */
+def _tab_section() -> str:
+    """QTabWidget semi-transparent tab styling."""
+    return f"""
+        QTabWidget {{ border: none; }}
         QTabWidget::pane {{
             border: 1px solid rgba(204, 204, 204, 100);
             border-top: none;
@@ -128,10 +153,7 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             border-bottom-left-radius: 6px;
             border-bottom-right-radius: 6px;
         }}
-        QTabBar {{
-            background: transparent;
-            border: none;
-        }}
+        QTabBar {{ background: transparent; border: none; }}
         QTabBar::tab {{
             background-color: rgba(232, 232, 232, 130); color: #555;
             padding: 8px 20px;
@@ -144,23 +166,25 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
             margin-right: 0px;
             font-size: 13px;
         }}
-        QTabBar::tab:hover {{
-            background-color: rgba(240, 240, 240, 180); color: #333;
-        }}
+        QTabBar::tab:hover {{ background-color: rgba(240, 240, 240, 180); color: #333; }}
         QTabBar::tab:selected {{
             background-color: rgba(255, 255, 255, 200); color: {COLOR_PRIMARY};
             font-weight: 600;
             border: 1px solid rgba(204, 204, 204, 100);
             border-bottom: none;
         }}
+        """
 
-        /* ── SizeGrip 样式 ── */
-        QSizeGrip {{
+
+def _size_grip_section() -> str:
+    """QSizeGrip (hide the default resize handle)."""
+    return """
+        QSizeGrip {
             width: 16px; height: 16px;
             background: transparent;
             image: none;
-        }}
-    """
+        }
+        """
 
 
 def get_preview_container_style() -> str:
