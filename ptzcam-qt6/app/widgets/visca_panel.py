@@ -3,7 +3,7 @@
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QGridLayout,
     QLabel, QPushButton, QComboBox, QLineEdit,
-    QTabWidget, QWidget, QCheckBox
+    QTabWidget, QWidget
 )
 from PySide6.QtCore import Qt, QTimer
 from typing import Optional, Callable
@@ -94,8 +94,8 @@ class VISCAPanel(QFrame):
         """
         self._controller = controller
         # Sync default checkbox state to controller (checkbox defaults to checked)
-        if hasattr(self, '_tilt_reverse_cb'):
-            controller.tilt_reverse = self._tilt_reverse_cb.isChecked()
+        if hasattr(self, '_tilt_reverse_btn'):
+            controller.tilt_reverse = self._tilt_reverse_btn.isChecked()
 
     def _populate_serial_ports(self) -> None:
         """Populate serial port combo with available ports in ascending order.
@@ -226,25 +226,29 @@ class VISCAPanel(QFrame):
         self._net_connect_btn.clicked.connect(self._toggle_network)
         grid.addWidget(self._net_connect_btn, 1, 2, 1, 2, Qt.AlignCenter)
 
-        # Direction reverse checkbox (default checked for standard cameras)
-        self._tilt_reverse_cb = QCheckBox("方向反转")
-        self._tilt_reverse_cb.setChecked(True)
-        self._tilt_reverse_cb.setToolTip("部分 VISCA 协议上下方向相反时取消勾选")
-        self._tilt_reverse_cb.setStyleSheet("""
-            QCheckBox {
-                color: #555; font-size: 11px; background: transparent;
-                spacing: 4px;
+        # Direction reverse toggle button
+        self._tilt_reverse_btn = QPushButton("方向反转 \u2714")
+        self._tilt_reverse_btn.setCheckable(True)
+        self._tilt_reverse_btn.setChecked(True)
+        self._tilt_reverse_btn.setToolTip("部分 VISCA 协议上下方向相反时取消勾选")
+        self._tilt_reverse_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 11px; background: #fff;
+                border: 1px solid #aaa; border-radius: 4px;
+                padding: 2px 8px; text-align: left; color: #333;
             }
-            QCheckBox::indicator {
-                border: 1px solid #888; border-radius: 2px;
-                width: 14px; height: 14px; background: #fff;
+            QPushButton:checked {
+                border-color: #1976d2; color: #1976d2; font-weight: bold;
             }
-            QCheckBox::indicator:checked {
-                background: #fff; border-color: #1976d2;
+            QPushButton:!checked {
+                color: #888;
+            }
+            QPushButton:hover {
+                background: #f5f5f5;
             }
         """)
-        self._tilt_reverse_cb.stateChanged.connect(self._on_tilt_reverse_changed)
-        grid.addWidget(self._tilt_reverse_cb, 2, 0, 1, 2)
+        self._tilt_reverse_btn.toggled.connect(self._on_tilt_reverse_changed)
+        grid.addWidget(self._tilt_reverse_btn, 2, 0, 1, 2)
 
         # Network status label
         self._net_status = QLabel("")
@@ -515,11 +519,17 @@ class VISCAPanel(QFrame):
         self._set_serial_connected(False)
         self._set_network_connected(False)
 
-    def _on_tilt_reverse_changed(self, state: int) -> None:
-        """Update controller tilt reverse flag when checkbox toggles."""
+    def _on_tilt_reverse_changed(self, checked: bool) -> None:
+        """Update controller tilt reverse flag when toggle changes.
+
+        Args:
+            checked: True if reverse is active.
+        """
+        self._tilt_reverse_btn.setText("方向反转 \u2714" if checked else "方向反转")
+        self._tilt_reverse_btn.setChecked(checked)
         if self._controller:
-            self._controller.tilt_reverse = (state == Qt.CheckState.Checked.value)
-            msg = "方向反转（非标相机使用）" if self._controller.tilt_reverse else "方向恢复正常（标准Sony VISCA）"
+            self._controller.tilt_reverse = checked
+            msg = "方向反转（非标相机使用）" if checked else "方向恢复正常（标准Sony VISCA）"
             self._net_status.setText(msg)
             self._net_status.setStyleSheet(
                 "color: #e65100; font-size: 11px; background: transparent; padding: 2px 0;"
