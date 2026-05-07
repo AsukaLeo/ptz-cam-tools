@@ -15,6 +15,66 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.25.507 — UI/UX 改进 + ONVIF 增强 + Bug 修复
+
+**Tag**: `V0.25.507` · **Commit**: `b290e74` · **日期**: 2026-05-07
+
+### UI/UX 改进
+- 状态栏视频信息跟随 Tab 切换（每 Tab 独立缓存，切换时自动刷新）
+- RTSP 输入框 disabled 状态变灰（`QLineEdit:disabled` CSS 样式）
+- RTSP/NDI/ONVIF 统一网卡选择控件（每行显示一个 IPv4 地址）
+- ONVIF 设备选择自动填充 IP/端口/用户信息
+- 所有 Tab 控制栏统一 120px 固定高度 + 垂直居中
+- 视频预览区背景 30% 不透明度（透出主窗背景图）
+- RTSP 输入框支持清空按钮 + 点击全选
+
+### ONVIF 增强
+- 遍历所有 Profile 获取 RTSP URL（不再只用 profiles[0]）
+- 自动尝试 20 组常见出厂默认凭据（admin:9999 优先）
+- 认证失败精确错误提示（状态栏显示具体原因）
+- RTSP 回落 URL 覆盖 30+ 种常见路径 + 标准 RTSP 端口 554
+- 工作凭据自动传递到 RTSP 拉流（无需手动输入密码）
+
+### Bug 修复
+- ONVIF 连接失败后按钮永久变灰锁死（缺 `_update_ui_stopped()`）
+- RTSP 回落端口错误（使用了 ONVIF HTTP 端口而非 554）
+
+### 新增文件
+- `app/utils/network_utils.py` — 网卡枚举公共函数（多 IP 分行显示）
+
+### 修改文件
+- `app/styles/theme.py` — QLineEdit:disabled + :focus 样式
+- `app/main_window.py` — Tab 切换视频信息刷新
+- `app/tabs/usb_tab.py` — 视频信息缓存
+- `app/tabs/rtsp_tab.py` — 共用网卡、清空按钮、全选、disabled 样式
+- `app/tabs/ndi_tab.py` — 添加网卡选择、固定高度居中
+- `app/tabs/onvif_tab.py` — 网卡选择、居中、自动填充、认证错误提示
+- `app/utils/onvif_device.py` — 遍历 Profile、默认凭据、认证检测、回落 URL
+- `app/utils/constants.py` — 预览区透明背景
+
+---
+
+## V 0.24.506 — PyInstaller 编译 + 图标 + 全功能修复
+
+**Tag**: `V0.24.506` · **Commit**: `c27b7af` · **日期**: 2026-05-06
+
+### 修复
+- PyInstaller 编译版 RTSP/ONVIF 不可用问题
+  - FFmpeg DLL 路径修正（_setup_bundled_paths）
+  - WSDL 文件打包（onvif-zeep 的 WSDL 在 site-packages/wsdl/）
+  - zeep 缓存路径修正（_setup_zeep_cache）
+- VISCA 协议 over IP 移除校验和（Dahua 相机不识别）
+- RTSP 认证空密码嵌入 + TCP 传参改环境变量
+
+### UI
+- 应用图标替换为 app_square.ico（16×16 ~ 256×256）
+
+### 构建
+- build_exe.bat: 一键编译，UPX 压缩
+- 输出: dist/PTZ-Cam-Tools-V{version}.exe（~178MB）
+
+---
+
 ## V 0.23.506 — VISCA 协议 PTZ 控制（Phase 3）
 
 **Tag**: `V0.23.506` · **Commit**: `873f944` · **日期**: 2026-05-06
