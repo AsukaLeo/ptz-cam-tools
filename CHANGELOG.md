@@ -15,6 +15,42 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+---
+
+## V 0.27.507 — 预置位管理 + UI 改进 + 串口异步连接
+
+**Tag**: `V0.27.507` · **Commit**: `b5873ce` · **日期**: 2026-05-07
+
+### 新增功能
+- **预置位管理**：PTZ面板新增 0-9 数字键盘 + 设置/清除/调用按钮
+- **速度滑块**：云台速度(1~24) 和 变焦速度(1~7) 滑动条，实时调整运动速度
+- **串口异步连接**：后台线程打开串口 + 5 秒超时，蓝牙串口不再卡 UI
+- **视频信息仅跟随激活 Tab**：后台播放的 tab 不再污染状态栏
+
+### UI 改进
+- 预览区占位文字改为白色 + 阴影，透背景时清晰
+- 视频两个预览层统一颜色（消除叠加分层感）
+- VISCA 连接/断开关联按钮变色 + 配置禁用
+- VISCA 状态信息内嵌到面板，不再混入底部状态栏
+- PTZ 按钮中文标注（变焦+/变焦-/聚焦+/聚焦-）
+- Home 按键改为文字显示
+
+### 修复
+- `build_preset_clear()` 新增 + `preset_clear()` 控制器方法
+- 串口异步线程 + 5s QTimer 防 GC 回收
+
+### 修改文件
+- `app/widgets/ptz_panel.py` — 预置位、速度滑块、中文标注、Home替换
+- `app/widgets/visca_panel.py` — 异步串口、连接toggle、状态标签
+- `app/widgets/preview.py` — 白色文字+阴影
+- `app/main_window.py` — 视频信息tab隔离
+- `app/utils/visca_protocol.py` — 新增 build_preset_clear
+- `app/utils/visca_controller.py` — 新增 preset_clear
+- `app/utils/constants.py` — 预览层统一颜色
+- `app/utils/visca_transport.py` — 回退简单串口打开
+
+---
+
 ## V 0.26.507 — VISCA PTZ 控制修复 + UI 增强
 
 **Tag**: `V0.26.507` · **Commit**: `6385a68` · **日期**: 2026-05-07

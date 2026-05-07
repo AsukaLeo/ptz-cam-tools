@@ -18,7 +18,7 @@ from typing import Optional, Callable
 from app.utils.visca_protocol import (
     build_pan_tilt, build_pan_tilt_stop, build_home,
     build_zoom, build_focus,
-    build_preset_set, build_preset_recall,
+    build_preset_set, build_preset_recall, build_preset_clear,
     ViscaResponse,
 )
 from app.utils.visca_transport import (
@@ -242,6 +242,20 @@ class ViscaController:
             return False
         self._notify(f"调用预设位 {preset_id}")
         return self._send(build_preset_recall(preset_id))
+
+    def preset_clear(self, preset_id: int) -> bool:
+        """Clear (reset) a preset position.
+
+        Args:
+            preset_id: Preset number (0~255) to clear.
+
+        Returns:
+            True if command sent.
+        """
+        if not self._ensure_connected():
+            return False
+        self._notify(f"清除预设位 {preset_id}")
+        return self._send(build_preset_clear(preset_id))
 
     # ------------------------------------------------------------------
     # Internal

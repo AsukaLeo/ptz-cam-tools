@@ -1,12 +1,13 @@
 """VISCA control panel widget."""
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QHBoxLayout, QGridLayout,
+    QFrame, QVBoxLayout, QGridLayout,
     QLabel, QPushButton, QComboBox, QLineEdit,
     QTabWidget, QWidget, QCheckBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from typing import Optional, Callable
+import threading
 
 from app.styles.theme import (
     get_visca_panel_style,
@@ -14,9 +15,20 @@ from app.styles.theme import (
     get_visca_connect_button_style,
 )
 from app.utils.constants import (
-    SERIAL_PORTS, BAUD_RATES, DATA_BITS, PARITY_BITS, STOP_BITS,
+    BAUD_RATES, DATA_BITS, PARITY_BITS, STOP_BITS,
     NETWORK_PROTOCOLS,
 )
+
+
+def _get_disconnect_button_style() -> str:
+    """Get style for red disconnect button."""
+    return """
+        QPushButton {
+            background: #d32f2f; color: #fff; border: none; border-radius: 4px;
+            padding: 4px 20px; font-size: 12px;
+        }
+        QPushButton:hover { background: #b71c1c; }
+    """
 
 
 class VISCAPanel(QFrame):
@@ -38,6 +50,10 @@ class VISCAPanel(QFrame):
 
         self.on_status_update: Optional[Callable[[str], None]] = None
         self._controller: Optional['ViscaController'] = None
+
+        # Serial connect state
+        self._serial_pending = False
+        self._serial_timeout_timer: Optional[QTimer] = None
 
         self._setup_ui()
 
@@ -77,6 +93,45 @@ class VISCAPanel(QFrame):
             controller: ViscaController instance.
         """
         self._controller = controller
+        # Sync default checkbox state to controller (checkbox defaults to checked)
+        if hasattr(self, '_tilt_reverse_cb'):
+            controller.tilt_reverse = self._tilt_reverse_cb.isChecked()
+
+    def _populate_serial_ports(self) -> None:
+        """Populate serial port combo with available ports in ascending order.
+
+        Uses Windows registry (instant, no hang). Falls back to a
+        reasonable range if registry read fails.
+        """
+        self._serial_port.clear()
+        ports: list[str] = []
+
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"HARDWARE\DEVICEMAP\SERIALCOMM",
+            )
+            i = 0
+            while True:
+                try:
+                    _, value, _ = winreg.EnumValue(key, i)
+                    com = value.upper().strip() if isinstance(value, str) else ""
+                    if com.startswith("COM"):
+                        ports.append(com)
+                    i += 1
+                except OSError:
+                    break
+            winreg.CloseKey(key)
+        except Exception:
+            pass
+
+        if not ports:
+            ports = [f"COM{i}" for i in range(1, 21)]
+
+        ports.sort(key=lambda x: int(x.replace("COM", "")) if x.startswith("COM") else 99)
+        for p in ports:
+            self._serial_port.addItem(p)
 
     def _create_serial_tab(self) -> QWidget:
         """Create the serial port configuration tab.
@@ -91,7 +146,7 @@ class VISCAPanel(QFrame):
 
         # Port combo
         self._serial_port = QComboBox()
-        self._serial_port.addItems(SERIAL_PORTS)
+        self._populate_serial_ports()
         grid.addWidget(QLabel("端口:"), 0, 0)
         grid.addWidget(self._serial_port, 0, 1)
 
@@ -119,11 +174,18 @@ class VISCAPanel(QFrame):
         grid.addWidget(QLabel("停止位:"), 1, 2)
         grid.addWidget(self._serial_stop, 1, 3)
 
-        # Open button
-        self._serial_open_btn = QPushButton("开启")
-        self._serial_open_btn.setStyleSheet(get_visca_connect_button_style())
-        self._serial_open_btn.clicked.connect(self._connect_serial)
-        grid.addWidget(self._serial_open_btn, 1, 4, 1, 2, Qt.AlignCenter)
+        # Connect/Disconnect button
+        self._serial_connect_btn = QPushButton("连接")
+        self._serial_connect_btn.setStyleSheet(get_visca_connect_button_style())
+        self._serial_connect_btn.clicked.connect(self._toggle_serial)
+        grid.addWidget(self._serial_connect_btn, 1, 4, 1, 2, Qt.AlignCenter)
+
+        # Serial status label
+        self._serial_status = QLabel("")
+        self._serial_status.setStyleSheet(
+            "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
+        )
+        grid.addWidget(self._serial_status, 2, 0, 1, 6)
 
         grid.setColumnStretch(6, 1)
         return page
@@ -158,17 +220,39 @@ class VISCAPanel(QFrame):
         grid.addWidget(QLabel("端口:"), 1, 0)
         grid.addWidget(self._net_port, 1, 1)
 
-        # Connect button
+        # Connect/Disconnect button
         self._net_connect_btn = QPushButton("连接")
         self._net_connect_btn.setStyleSheet(get_visca_connect_button_style())
-        self._net_connect_btn.clicked.connect(self._connect_network)
+        self._net_connect_btn.clicked.connect(self._toggle_network)
         grid.addWidget(self._net_connect_btn, 1, 2, 1, 2, Qt.AlignCenter)
 
-        # Tilt reverse checkbox (some cameras use swapped up/down values)
-        self._tilt_reverse_cb = QCheckBox("倾斜方向反转")
-        self._tilt_reverse_cb.setToolTip("部分 VISCA 协议上下方向相反时勾选此项")
+        # Direction reverse checkbox (default checked for standard cameras)
+        self._tilt_reverse_cb = QCheckBox("方向反转")
+        self._tilt_reverse_cb.setChecked(True)
+        self._tilt_reverse_cb.setToolTip("部分 VISCA 协议上下方向相反时取消勾选")
+        self._tilt_reverse_cb.setStyleSheet("""
+            QCheckBox {
+                color: #555; font-size: 11px; background: transparent;
+                spacing: 4px;
+            }
+            QCheckBox::indicator {
+                border: 1px solid #888; border-radius: 2px;
+                width: 14px; height: 14px; background: #fff;
+            }
+            QCheckBox::indicator:checked {
+                background: #fff; border-color: #1976d2;
+                image: url(assets/check_on.svg);
+            }
+        """)
         self._tilt_reverse_cb.stateChanged.connect(self._on_tilt_reverse_changed)
         grid.addWidget(self._tilt_reverse_cb, 2, 0, 1, 2)
+
+        # Network status label
+        self._net_status = QLabel("")
+        self._net_status.setStyleSheet(
+            "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
+        )
+        grid.addWidget(self._net_status, 2, 2, 1, 2)
 
         grid.setColumnStretch(4, 1)
         return page
@@ -210,13 +294,85 @@ class VISCAPanel(QFrame):
                 self._net_proto.setCurrentIndex(idx)
 
     # ------------------------------------------------------------------
+    # UI state management
+    # ------------------------------------------------------------------
+
+    def _set_serial_config_enabled(self, enabled: bool) -> None:
+        """Enable or disable serial config widgets.
+
+        Args:
+            enabled: True to enable, False to disable.
+        """
+        for w in [self._serial_port, self._serial_baud,
+                  self._serial_data, self._serial_parity, self._serial_stop]:
+            w.setEnabled(enabled)
+
+    def _set_serial_connected(self, connected: bool) -> None:
+        """Update serial tab UI for connected/disconnected state.
+
+        Args:
+            connected: True if connected, False if disconnected.
+        """
+        btn = self._serial_connect_btn
+        if connected:
+            btn.setText("断开")
+            btn.setStyleSheet(_get_disconnect_button_style())
+            self._serial_status.setText("已连接")
+            self._serial_status.setStyleSheet(
+                "color: #2e7d32; font-size: 11px; background: transparent; padding: 2px 0;"
+            )
+        else:
+            btn.setText("连接")
+            btn.setStyleSheet(get_visca_connect_button_style())
+            self._serial_status.setText("")
+            self._serial_status.setStyleSheet(
+                "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
+            )
+
+        self._set_serial_config_enabled(not connected)
+
+    def _set_network_connected(self, connected: bool) -> None:
+        """Update network tab UI for connected/disconnected state.
+
+        Args:
+            connected: True if connected, False if disconnected.
+        """
+        btn = self._net_connect_btn
+        if connected:
+            btn.setText("断开")
+            btn.setStyleSheet(_get_disconnect_button_style())
+            self._net_status.setText("已连接")
+            self._net_status.setStyleSheet(
+                "color: #2e7d32; font-size: 11px; background: transparent; padding: 2px 0;"
+            )
+        else:
+            btn.setText("连接")
+            btn.setStyleSheet(get_visca_connect_button_style())
+            self._net_status.setText("")
+            self._net_status.setStyleSheet(
+                "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
+            )
+
+        # Toggle config widgets
+        for w in [self._net_proto, self._net_addr, self._net_port]:
+            w.setEnabled(not connected)
+
+    # ------------------------------------------------------------------
     # Connection handlers
     # ------------------------------------------------------------------
 
-    def _connect_serial(self) -> None:
-        """Open serial VISCA connection."""
+    def _toggle_serial(self) -> None:
+        """Toggle serial VISCA connection on/off (non-blocking)."""
         if not self._controller:
             self._notify_status("控制器未初始化")
+            return
+
+        if self._serial_connect_btn.text() == "断开":
+            self._disconnect()
+            return
+
+        # Prevent double clicks
+        if self._serial_pending:
             return
 
         port = self._serial_port.currentText() if hasattr(self, '_serial_port') else "COM1"
@@ -228,12 +384,88 @@ class VISCAPanel(QFrame):
         parity_map = {"None": 'N', "Odd": 'O', "Even": 'E', "Mark": 'M', "Space": 'S'}
         parity_char = parity_map.get(parity, 'N')
 
-        self._controller.connect_serial(port, baud, data, parity_char, stop)
+        # Show connecting state
+        self._serial_pending = True
+        self._serial_connect_btn.setText("连接中...")
+        self._serial_connect_btn.setEnabled(False)
+        self._set_serial_config_enabled(False)
 
-    def _connect_network(self) -> None:
-        """Open network VISCA connection."""
+        # Run serial open in background thread
+        result: list[bool] = [False]
+        done = [False]
+
+        def _do_connect() -> None:
+            try:
+                result[0] = self._controller.connect_serial(
+                    port, baud, data, parity_char, stop
+                )
+            except Exception:
+                result[0] = False
+            done[0] = True
+
+        thread = threading.Thread(target=_do_connect, daemon=True)
+        thread.start()
+
+        # Clean up previous timeout timer
+        if self._serial_timeout_timer:
+            self._serial_timeout_timer.stop()
+
+        def _on_serial_done() -> None:
+            if not self._serial_pending:
+                return
+            self._serial_pending = False
+            self._serial_connect_btn.setEnabled(True)
+            if result[0]:
+                self._set_serial_connected(True)
+            else:
+                self._serial_status.setText("连接失败")
+                self._serial_status.setStyleSheet(
+                    "color: #c62828; font-size: 11px; background: transparent; padding: 2px 0;"
+                )
+                self._serial_connect_btn.setText("连接")
+                self._serial_timeout_timer = None
+                self._set_serial_config_enabled(True)
+
+        def _on_serial_timeout() -> None:
+            if not self._serial_pending:
+                return
+            self._serial_pending = False
+            done[0] = True  # prevent result check
+            self._serial_connect_btn.setEnabled(True)
+            self._serial_connect_btn.setText("连接")
+            self._serial_status.setText("连接超时")
+            self._serial_status.setStyleSheet(
+                "color: #c62828; font-size: 11px; background: transparent; padding: 2px 0;"
+            )
+            self._serial_timeout_timer = None
+            self._set_serial_config_enabled(True)
+
+        # Start timeout timer (stored on self to prevent GC)
+        self._serial_timeout_timer = QTimer()
+        self._serial_timeout_timer.setSingleShot(True)
+        self._serial_timeout_timer.timeout.connect(_on_serial_timeout)
+        self._serial_timeout_timer.start(5000)
+
+        # Poll thread completion
+        def _poll() -> None:
+            if done[0]:
+                _on_serial_done()
+                return
+            if not self._serial_pending:
+                return  # was timed out
+            QTimer.singleShot(100, _poll)
+
+        QTimer.singleShot(100, _poll)
+
+    def _toggle_network(self) -> None:
+        """Toggle network VISCA connection on/off."""
         if not self._controller:
             self._notify_status("控制器未初始化")
+            return
+
+        # If currently connected, disconnect
+        if self._net_connect_btn.text() == "断开":
+            self._disconnect()
             return
 
         proto = self._net_proto.currentText() if hasattr(self, '_net_proto') else "TCP"
@@ -246,16 +478,34 @@ class VISCAPanel(QFrame):
             port = 5678
 
         if proto == "UDP":
-            self._controller.connect_udp(host, port)
+            success = self._controller.connect_udp(host, port)
         else:
-            self._controller.connect_tcp(host, port)
+            success = self._controller.connect_tcp(host, port)
+
+        if success:
+            self._set_network_connected(True)
+        else:
+            self._net_status.setText("连接失败")
+            self._net_status.setStyleSheet(
+                "color: #c62828; font-size: 11px; background: transparent; padding: 2px 0;"
+            )
+
+    def _disconnect(self) -> None:
+        """Disconnect VISCA and reset UI."""
+        self._serial_pending = False
+        if self._controller:
+            self._controller.disconnect()
+        self._set_serial_connected(False)
+        self._set_network_connected(False)
 
     def _on_tilt_reverse_changed(self, state: int) -> None:
         """Update controller tilt reverse flag when checkbox toggles."""
         if self._controller:
             self._controller.tilt_reverse = (state == Qt.CheckState.Checked.value)
-            self._notify_status(
-                "倾斜方向已反转" if self._controller.tilt_reverse else "倾斜方向恢复正常"
+            msg = "方向反转（非标相机使用）" if self._controller.tilt_reverse else "方向恢复正常（标准Sony VISCA）"
+            self._net_status.setText(msg)
+            self._net_status.setStyleSheet(
+                "color: #e65100; font-size: 11px; background: transparent; padding: 2px 0;"
             )
 
     def _notify_status(self, message: str) -> None:

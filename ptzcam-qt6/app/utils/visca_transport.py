@@ -132,7 +132,7 @@ class SerialTransport(ViscaTransport):
                 bytesize=self._data_bits,
                 parity=parity_map.get(self._parity.upper(), serial.PARITY_NONE),
                 stopbits=float(self._stop_bits),
-                timeout=0.1,  # short timeout for non-blocking reads
+                timeout=0.1,
             )
             self._logger.info(f"Serial port opened: {self._port} @ {self._baud}")
             return True

@@ -1,9 +1,11 @@
 """Video preview widget component."""
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QLabel, QWidget
+    QFrame, QVBoxLayout, QLabel, QWidget,
+    QGraphicsDropShadowEffect,
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from typing import Optional
 
 from app.styles.theme import (
@@ -49,11 +51,17 @@ class PreviewWidget(QFrame):
         self._video_layout.setContentsMargins(0, 0, 0, 0)
         self._video_layout.setAlignment(Qt.AlignCenter)
         
-        # Placeholder text
+        # Placeholder text with white color and drop shadow
         self.placeholder_label = QLabel(PREVIEW_PLACEHOLDER_TEXT)
         self.placeholder_label.setStyleSheet(
-            "color: #666; font-size: 24px; background: transparent;"
+            "color: #fff; font-size: 24px; background: transparent;"
+            "font-weight: 500;"
         )
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setColor(QColor(0, 0, 0, 160))
+        shadow.setOffset(1, 1)
+        shadow.setBlurRadius(6)
+        self.placeholder_label.setGraphicsEffect(shadow)
         self.placeholder_label.setAlignment(Qt.AlignCenter)
         self._video_layout.addWidget(self.placeholder_label)
         

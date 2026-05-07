@@ -208,6 +208,22 @@ def build_preset_recall(preset_id: int) -> bytes:
     return packet
 
 
+def build_preset_clear(preset_id: int) -> bytes:
+    """Build a Preset Clear (Reset) command.
+
+    Command: 81 01 04 3F 00 0p FF
+
+    Args:
+        preset_id: Preset number (0~255) to clear.
+
+    Returns:
+        VISCA command packet bytes.
+    """
+    packet = bytes([VISCA_HEADER | 0x01, VISCA_COMMAND,
+                    0x04, 0x3F, 0x00, preset_id & 0xFF, VISCA_TERMINATOR])
+    return packet
+
+
 # ---------------------------------------------------------------------------
 # Response parsing
 # ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QResizeEvent
-from typing import Optional
+from typing import Optional, Callable
 
 from app.utils.constants import (
     MIN_WIDTH, MIN_HEIGHT, DEFAULT_WIDTH, DEFAULT_HEIGHT,
@@ -45,6 +45,8 @@ class MainWindow(QMainWindow):
         self._preview_frames: list[PreviewWidget] = []
         self._resizing: bool = False
         self._tab_widgets: dict[str, QWidget] = {}
+        # Track which tab is currently active
+        self._active_tab_name: str = TAB_USB
         
         # Set window constraints
         self.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
@@ -84,13 +86,13 @@ class MainWindow(QMainWindow):
         
         # Create tab pages
         self._usb_tab = USBTab()
-        self._usb_tab.set_video_info_callback(self.update_video_info)
+        self._usb_tab.set_video_info_callback(self._make_video_info_callback(TAB_USB))
         self._rtsp_tab = RTSPTab()
-        self._rtsp_tab.set_video_info_callback(self.update_video_info)
+        self._rtsp_tab.set_video_info_callback(self._make_video_info_callback(TAB_RTSP))
         self._ndi_tab = NDITab()
-        self._ndi_tab.set_video_info_callback(self.update_video_info)
+        self._ndi_tab.set_video_info_callback(self._make_video_info_callback(TAB_NDI))
         self._onvif_tab = ONVIFTab()
-        self._onvif_tab.set_video_info_callback(self.update_video_info)
+        self._onvif_tab.set_video_info_callback(self._make_video_info_callback(TAB_ONVIF))
         self._settings_tab = SettingsTab()
         
         # Store references
@@ -254,6 +256,9 @@ class MainWindow(QMainWindow):
             "设置",
         ]
 
+        if index < len(tab_names):
+            self._active_tab_name = tab_names[index]
+
         status = statuses[index] if index < len(statuses) else STATUS_READY
         self._logger.debug(f"Tab changed to: {tab_names[index] if index < len(tab_names) else 'Unknown'}")
         self.update_status(status)
@@ -268,19 +273,43 @@ class MainWindow(QMainWindow):
 
     def _update_video_info_from_tab(self, tab: QWidget) -> None:
         """Read cached video info from a tab and display it.
+        Clears the display if the tab has no active video.
 
         Args:
             tab: The tab widget to read info from.
         """
+        has_info = False
         if hasattr(tab, 'get_last_video_info'):
             info = tab.get_last_video_info()
-            if info:
+            # Only display if the tab has meaningful video info (width > 0)
+            if info and len(info) >= 2 and info[0] > 0:
                 self.update_video_info(*info)
-            else:
-                # Clear video info
-                self.update_video_info(0, 0, "", 0.0, 0, "", 0.0)
-        else:
-            self.update_video_info(0, 0, "", 0.0, 0, "", 0.0)
+                has_info = True
+
+        if not has_info:
+            self.video_info_label.setText("")
+
+    def _make_video_info_callback(self, tab_name: str) -> Callable:
+        """Create a video info callback that only updates the status bar
+        when the calling tab is the currently active tab.
+
+        Args:
+            tab_name: Name of the tab this callback belongs to.
+
+        Returns:
+            A callable that filters updates by active tab.
+        """
+        def callback(width: int, height: int,
+                     format_name: str, fps: float,
+                     latency_ms: int = 0,
+                     decode_method: str = "",
+                     cpu_percent: float = 0.0) -> None:
+            if tab_name == self._active_tab_name:
+                self.update_video_info(
+                    width, height, format_name, fps,
+                    latency_ms, decode_method, cpu_percent,
+                )
+        return callback
     
     def update_status(self, text: str) -> None:
         """Update the status bar text.
