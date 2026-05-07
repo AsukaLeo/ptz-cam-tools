@@ -17,6 +17,32 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.28.507 — Slim Edition：体积优化（233MB→98MB，-58%）
+
+**Tag**: `V0.28.507` · **Commit**: `b2f6091` · **日期**: 2026-05-07
+
+### 体积优化
+- **PySide6 DLL 裁剪**：从全量打包改为只保留 Core/Gui/Widgets/Multimedia/Network/Svg/OpenGL 模块
+- **FFmpeg 去重**：原来打包 3 份 FFmpeg（PySide6 + OpenCV + 自己），现只留一份核心 4 个 DLL
+- **USB 去掉 OpenCV**：`cv2.VideoCapture` → `QCamera` + `QMediaCaptureSession` + `QVideoSink`
+- **RTSP 去掉 OpenCV**：`cv2.VideoCapture(CAP_FFMPEG)` → `QMediaPlayer` + `QVideoSink`
+- **NumPy 随 OpenCV 一起移除**
+
+### 技术债务清理
+- P0: 3 个过长函数拆分（onvif_device/rtsp_capture/visca_panel）
+- P1: ControlCard 公共组件（4 个 tab 减少 ~270 行重复代码）
+- P2: 清理未用导入 ~13 个、未用常量 ~9 个、未用 SVG 3 个
+- `theme.py` `get_global_stylesheet` 拆分为 6 个子函数
+- QCheckBox → QPushButton toggle 彻底解决深色主题勾选框渲染问题
+
+### 修复
+- 串口异步连接（5s 超时不卡 UI）
+- 视频信息仅跟随激活 Tab
+- 预览文字白色+阴影、两层颜色统一
+- NDI VISCA 地址剥离端口号
+
+---
+
 ## V 0.27.507 — 预置位管理 + UI 改进 + 串口异步连接
 
 **Tag**: `V0.27.507` · **Commit**: `b5873ce` · **日期**: 2026-05-07
