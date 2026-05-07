@@ -187,7 +187,7 @@ class DirectShowCapture(QObject):
 
         Args:
             device: Device to capture from.
-            format_info: Optional format (for future use with QCameraFormat).
+            format_info: Desired format (resolution/FPS). Applied to QCamera.
             callback: Optional direct frame callback.
 
         Returns:
@@ -206,6 +206,31 @@ class DirectShowCapture(QObject):
         qt_dev = qt_devices[device.index]
 
         self._camera = QCamera(qt_dev)
+
+        # Apply format if specified
+        if format_info:
+            qt_formats = qt_dev.videoFormats()
+            target_w = format_info.width
+            target_h = format_info.height
+            target_fps = format_info.fps
+            best = None
+            best_score = float('inf')
+            for qf in qt_formats:
+                r = qf.resolution()
+                fps = qf.maxFrameRate()
+                # Score: smallest resolution-area diff, then smallest fps diff
+                score = abs(r.width() - target_w) * abs(r.height() - target_h) + abs(fps - target_fps) * 100
+                if score < best_score:
+                    best_score = score
+                    best = qf
+            if best:
+                self._camera.setCameraFormat(best)
+                actual = best.resolution()
+                self._logger.info(
+                    f"Camera format set: {actual.width()}x{actual.height()}"
+                    f" @ {best.maxFrameRate():.0f}fps"
+                )
+
         self._session = QMediaCaptureSession()
         self._sink = QVideoSink()
 
