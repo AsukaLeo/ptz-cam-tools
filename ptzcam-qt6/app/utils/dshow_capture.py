@@ -213,22 +213,39 @@ class DirectShowCapture(QObject):
             target_w = format_info.width
             target_h = format_info.height
             target_fps = format_info.fps
+
+            # Try exact match first (resolution + FPS)
             best = None
-            best_score = float('inf')
             for qf in qt_formats:
                 r = qf.resolution()
-                fps = qf.maxFrameRate()
-                # Score: smallest resolution-area diff, then smallest fps diff
-                score = abs(r.width() - target_w) * abs(r.height() - target_h) + abs(fps - target_fps) * 100
-                if score < best_score:
-                    best_score = score
-                    best = qf
+                if r.width() == target_w and r.height() == target_h:
+                    if abs(qf.maxFrameRate() - target_fps) < 1.0:
+                        best = qf
+                        break
+                    if best is None:
+                        best = qf
+
+            # Fallback: closest match
+            if best is None:
+                best_score = float('inf')
+                for qf in qt_formats:
+                    r = qf.resolution()
+                    fps = qf.maxFrameRate()
+                    score = abs(r.width() - target_w) + abs(r.height() - target_h)
+                    if score <= best_score:
+                        if score < best_score or abs(fps - target_fps) < abs(
+                            best.maxFrameRate() - target_fps if best else 999
+                        ):
+                            best_score = score
+                            best = qf
+
             if best:
                 self._camera.setCameraFormat(best)
                 actual = best.resolution()
                 self._logger.info(
-                    f"Camera format set: {actual.width()}x{actual.height()}"
+                    f"Camera format: {actual.width()}x{actual.height()}"
                     f" @ {best.maxFrameRate():.0f}fps"
+                    f" (requested {target_w}x{target_h} @ {target_fps:.0f}fps)"
                 )
 
         self._session = QMediaCaptureSession()
