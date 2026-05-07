@@ -41,6 +41,7 @@ class ONVIFTab(QWidget):
 
         # Callbacks (set externally)
         self.on_status_update: Optional[Callable[[str], None]] = None
+        self.on_visca_address: Optional[Callable[[str], None]] = None
         self.preview_widget: Optional[QWidget] = None
         self._on_video_info: Optional[Callable] = None
 
@@ -327,6 +328,10 @@ class ONVIFTab(QWidget):
         success = self._onvif_conn.connect(
             ip, port, username, password, pre_info
         )
+
+        # Auto-fill VISCA address with ONVIF device IP
+        if success and self.on_visca_address and ip:
+            self.on_visca_address(ip)
 
         if not success:
             # Show specific error from ONVIF connection

@@ -3,7 +3,7 @@
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QComboBox, QLineEdit,
-    QTabWidget, QWidget
+    QTabWidget, QWidget, QCheckBox
 )
 from PySide6.QtCore import Qt
 from typing import Optional, Callable
@@ -142,6 +142,7 @@ class VISCAPanel(QFrame):
         # Protocol
         self._net_proto = QComboBox()
         self._net_proto.addItems(NETWORK_PROTOCOLS)
+        self._net_proto.currentIndexChanged.connect(self._on_protocol_changed)
         grid.addWidget(QLabel("协议:"), 0, 0)
         grid.addWidget(self._net_proto, 0, 1)
 
@@ -163,8 +164,50 @@ class VISCAPanel(QFrame):
         self._net_connect_btn.clicked.connect(self._connect_network)
         grid.addWidget(self._net_connect_btn, 1, 2, 1, 2, Qt.AlignCenter)
 
+        # Tilt reverse checkbox (some cameras use swapped up/down values)
+        self._tilt_reverse_cb = QCheckBox("倾斜方向反转")
+        self._tilt_reverse_cb.setToolTip("部分 VISCA 协议上下方向相反时勾选此项")
+        self._tilt_reverse_cb.stateChanged.connect(self._on_tilt_reverse_changed)
+        grid.addWidget(self._tilt_reverse_cb, 2, 0, 1, 2)
+
         grid.setColumnStretch(4, 1)
         return page
+
+    # ------------------------------------------------------------------
+    # Protocol-port linkage
+    # ------------------------------------------------------------------
+
+    def _on_protocol_changed(self, index: int) -> None:
+        """Auto-update port when protocol changes.
+
+        TCP → port 5678, UDP → port 52381.
+        """
+        proto = self._net_proto.currentText() if hasattr(self, '_net_proto') else "TCP"
+        if hasattr(self, '_net_port'):
+            if proto == "UDP":
+                self._net_port.setText("52381")
+            else:
+                self._net_port.setText("5678")
+
+    def set_network_address(self, ip: str) -> None:
+        """Set the network address field (called from main window / video tabs).
+
+        Args:
+            ip: IP address string.
+        """
+        if hasattr(self, '_net_addr') and ip:
+            self._net_addr.setText(ip)
+
+    def set_network_protocol(self, proto: str) -> None:
+        """Set the network protocol combo (TCP/UDP).
+
+        Args:
+            proto: 'TCP' or 'UDP'.
+        """
+        if hasattr(self, '_net_proto'):
+            idx = self._net_proto.findText(proto)
+            if idx >= 0:
+                self._net_proto.setCurrentIndex(idx)
 
     # ------------------------------------------------------------------
     # Connection handlers
@@ -206,6 +249,14 @@ class VISCAPanel(QFrame):
             self._controller.connect_udp(host, port)
         else:
             self._controller.connect_tcp(host, port)
+
+    def _on_tilt_reverse_changed(self, state: int) -> None:
+        """Update controller tilt reverse flag when checkbox toggles."""
+        if self._controller:
+            self._controller.tilt_reverse = (state == Qt.CheckState.Checked.value)
+            self._notify_status(
+                "倾斜方向已反转" if self._controller.tilt_reverse else "倾斜方向恢复正常"
+            )
 
     def _notify_status(self, message: str) -> None:
         """Notify status update via callback."""

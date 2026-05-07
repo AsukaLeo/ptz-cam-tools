@@ -108,7 +108,10 @@ class MainWindow(QMainWindow):
         for tab in self._tab_widgets.values():
             if hasattr(tab, 'set_status_callback'):
                 tab.set_status_callback(self.update_status)
-        
+
+        # Set up VISCA address auto-fill callbacks for video tabs
+        self._setup_visca_address_callbacks()
+
         # Create preview widgets for each tab
         self._create_preview_for_tab(self._usb_tab)
         self._create_preview_for_tab(self._rtsp_tab)
@@ -145,7 +148,23 @@ class MainWindow(QMainWindow):
             tab.set_preview_widget(preview)
         
         return preview
-    
+
+    def _setup_visca_address_callbacks(self) -> None:
+        """Set up auto-fill callbacks: video tab IP → VISCA panel address."""
+        def make_callback(tab_name: str):
+            def callback(ip: str):
+                self._logger.info(
+                    f"Auto-fill VISCA address from {tab_name}: {ip}"
+                )
+                if hasattr(self, '_visca_panel'):
+                    self._visca_panel.set_network_address(ip)
+            return callback
+
+        for name in [TAB_RTSP, TAB_NDI, TAB_ONVIF]:
+            tab = self._tab_widgets.get(name)
+            if tab and hasattr(tab, 'on_visca_address'):
+                tab.on_visca_address = make_callback(name)
+
     def _create_control_panels(self, parent_layout: QVBoxLayout) -> None:
         """Create PTZ and VISCA control panels.
 

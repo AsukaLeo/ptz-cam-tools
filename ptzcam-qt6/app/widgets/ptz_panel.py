@@ -76,7 +76,9 @@ class PTZPanel(QFrame):
         self._controller = controller
 
     def _create_dpad(self) -> QGridLayout:
-        """Create the 3x3 directional pad layout.
+        """Create the 3x3 directional pad layout with press/release control.
+
+        Press = start moving, Release = stop moving.
 
         Returns:
             QGridLayout with directional buttons.
@@ -84,15 +86,25 @@ class PTZPanel(QFrame):
         dpad = QGridLayout()
         dpad.setSpacing(2)
 
-        # Direction buttons - call controller when available
-        dpad.addWidget(self._create_ptz_btn("↖"), 0, 0)
+        # Direction buttons - press to move, release to stop
         dpad.addWidget(
-            self._create_ptz_btn("▲", lambda: self._do_ptz(0, -1)),
+            self._create_dir_btn("↖", lambda: self._do_ptz(-1, -1),  # press
+                                 lambda: self._do_stop()),            # release
+            0, 0
+        )
+        dpad.addWidget(
+            self._create_dir_btn("▲", lambda: self._do_ptz(0, -1),
+                                 lambda: self._do_stop()),
             0, 1
         )
-        dpad.addWidget(self._create_ptz_btn("↗"), 0, 2)
         dpad.addWidget(
-            self._create_ptz_btn("◀", lambda: self._do_ptz(-1, 0)),
+            self._create_dir_btn("↗", lambda: self._do_ptz(1, -1),
+                                 lambda: self._do_stop()),
+            0, 2
+        )
+        dpad.addWidget(
+            self._create_dir_btn("◀", lambda: self._do_ptz(-1, 0),
+                                 lambda: self._do_stop()),
             1, 0
         )
 
@@ -108,15 +120,27 @@ class PTZPanel(QFrame):
         dpad.addWidget(center_btn, 1, 1)
 
         dpad.addWidget(
-            self._create_ptz_btn("▶", lambda: self._do_ptz(1, 0)),
+            self._create_dir_btn("▶", lambda: self._do_ptz(1, 0),
+                                 lambda: self._do_stop()),
             1, 2
         )
-        dpad.addWidget(self._create_ptz_btn("↙"), 2, 0)
         dpad.addWidget(
-            self._create_ptz_btn("▼", lambda: self._do_ptz(0, 1)),
+            self._create_dir_btn("↙", lambda: self._do_ptz(-1, 1),
+                                 lambda: self._do_stop()),
+            2, 0
+        )
+        dpad.addWidget(
+            self._create_dir_btn("▼", lambda: self._do_ptz(0, 1),
+                                 lambda: self._do_stop()),
             2, 1
         )
-        dpad.addWidget(self._create_ptz_btn("↘"), 2, 2)
+        dpad.addWidget(
+            self._create_dir_btn("↘", lambda: self._do_ptz(1, 1),
+                                 lambda: self._do_stop()),
+            2, 2
+        )
+
+        return dpad
 
         return dpad
 
@@ -131,14 +155,18 @@ class PTZPanel(QFrame):
 
         zr = QHBoxLayout()
         zr.setSpacing(8)
-        zr.addWidget(self._create_ctrl_btn("Zoom+", lambda: self._do_zoom(3)))
-        zr.addWidget(self._create_ctrl_btn("Focus+", lambda: self._do_focus(3)))
+        zr.addWidget(self._create_press_btn("Zoom+", lambda: self._do_zoom(3),
+                                            lambda: self._do_zoom(0)))
+        zr.addWidget(self._create_press_btn("Focus+", lambda: self._do_focus(3),
+                                            lambda: self._do_focus(0)))
         zf_layout.addLayout(zr)
 
         fr = QHBoxLayout()
         fr.setSpacing(8)
-        fr.addWidget(self._create_ctrl_btn("Zoom-", lambda: self._do_zoom(-3)))
-        fr.addWidget(self._create_ctrl_btn("Focus-", lambda: self._do_focus(-3)))
+        fr.addWidget(self._create_press_btn("Zoom-", lambda: self._do_zoom(-3),
+                                            lambda: self._do_zoom(0)))
+        fr.addWidget(self._create_press_btn("Focus-", lambda: self._do_focus(-3),
+                                            lambda: self._do_focus(0)))
         zf_layout.addLayout(fr)
 
         return zf_layout
@@ -158,7 +186,7 @@ class PTZPanel(QFrame):
         return hs
 
     def _create_ptz_btn(self, text: str, callback: Optional[Callable] = None) -> QPushButton:
-        """Create a PTZ direction button.
+        """Create a PTZ direction button (click-based, single action).
 
         Args:
             text: Button text.
@@ -179,6 +207,57 @@ class PTZPanel(QFrame):
         """)
         if callback:
             btn.clicked.connect(callback)
+        return btn
+
+    def _create_dir_btn(self, text: str,
+                        on_press: Callable, on_release: Callable) -> QPushButton:
+        """Create a direction button with press/release actions.
+
+        Press = start moving in that direction.
+        Release = stop pan/tilt.
+
+        Args:
+            text: Button text.
+            on_press: Callback for button press (start movement).
+            on_release: Callback for button release (stop movement).
+
+        Returns:
+            Configured QPushButton.
+        """
+        btn = QPushButton(text)
+        btn.setFixedSize(32, 28)
+        btn.setStyleSheet("""
+            QPushButton {
+                font-size: 12px; padding: 0; border: 1px solid #aaa;
+                border-radius: 6px; background: #f5f5f5; color: #333;
+            }
+            QPushButton:hover { background: #e5e5e5; }
+            QPushButton:pressed { background: #d0d0d0; }
+        """)
+        btn.pressed.connect(on_press)
+        btn.released.connect(on_release)
+        return btn
+
+    def _create_press_btn(self, text: str,
+                          on_press: Callable, on_release: Callable) -> QPushButton:
+        """Create a button with press/release actions.
+
+        Sends start command on press, stop command on release.
+        Used for Zoom/Focus controls that should stop when released.
+
+        Args:
+            text: Button text.
+            on_press: Callback for button press (start action).
+            on_release: Callback for button release (stop action).
+
+        Returns:
+            Configured QPushButton.
+        """
+        btn = QPushButton(text)
+        btn.setFixedWidth(80)
+        btn.setStyleSheet(get_standard_button_style())
+        btn.pressed.connect(on_press)
+        btn.released.connect(on_release)
         return btn
 
     def _create_ctrl_btn(self, text: str, callback: Callable) -> QPushButton:
@@ -218,14 +297,22 @@ class PTZPanel(QFrame):
     # ------------------------------------------------------------------
 
     def _do_ptz(self, pan_dir: int, tilt_dir: int) -> None:
-        """Execute pan/tilt command.
+        """Execute pan/tilt using standard Sony VISCA direction values.
+
+        Pan: 1=left, 2=right, 3=center/stop
+        Tilt: 1=down, 2=up, 3=center/stop
 
         Args:
             pan_dir: -1=left, 0=center, 1=right.
             tilt_dir: -1=up, 0=center, 1=down.
         """
-        pdir = {0: 0, -1: 1, 1: 2}.get(pan_dir, 0)  # stop, left, right
-        tdir = {0: 0, -1: 3, 1: 1}.get(tilt_dir, 0)  # stop, up, down
+        # Standard VISCA: pan left=1 right=2 stop=3, tilt up=2 down=1 stop=3
+        pdir = {0: 3, -1: 1, 1: 2}.get(pan_dir, 3)
+        tdir = {0: 3, -1: 2, 1: 1}.get(tilt_dir, 3)
+
+        # Non-standard cameras swap tilt up/down
+        if self._controller and self._controller.tilt_reverse:
+            tdir = {1: 2, 2: 1}.get(tdir, tdir)
 
         if self._controller and self._controller.is_connected:
             self._controller.pan_tilt(pan_dir=pdir, tilt_dir=tdir)

@@ -15,6 +15,37 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.26.507 — VISCA PTZ 控制修复 + UI 增强
+
+**Tag**: `V0.26.507` · **Commit**: `6385a68` · **日期**: 2026-05-07
+
+### VISCA 重大修复（对照 Sony 标准协议）
+- **方向值修正**：Tilt Up 从错误的 `0x03` 修正为 Sony 标准 `0x02`
+- **停止命令修正**：`build_pan_tilt_stop()` 回到标准 `03 03` 格式
+- **方向按钮改为 press/release**：按下持续运动，松开立即停止
+- **四角方向补全**：↖↗↙↘ 之前没有接线
+- **UDP 可靠性增强**：每条命令发 3 次防丢包
+- **默认速度调整**：PTZ=5, Zoom=6, Focus=6
+- **地址初始化**：连接时自动发送 `88 30 01 FF`
+- **取消 speed=0 覆盖**：zoom(0)/focus(0) 正确发送停止命令
+
+### 新增功能
+- **倾斜方向反转开关**：VISCA 网络选项卡新增复选框，适配非标准相机
+- **VISCA IP 自动填充**：播放 RTSP/NDI/ONVIF 时自动填入视频源 IP
+- **协议-端口联动**：TCP→5678, UDP→52381 自动切换
+
+### 修改文件
+- `app/utils/visca_protocol.py` — 标准方向值、方向常量
+- `app/utils/visca_controller.py` — 地址初始化、speed=0 修复、默认速度
+- `app/widgets/ptz_panel.py` — 标准方向映射、press/release、方向按钮补全
+- `app/widgets/visca_panel.py` — 倾斜反转、协议端口联动、IP 设置接口
+- `app/main_window.py` — VISCA 地址自动填充回调
+- `app/tabs/rtsp_tab.py` — 视频源 IP 回调
+- `app/tabs/ndi_tab.py` — 视频源 IP 回调
+- `app/tabs/onvif_tab.py` — 视频源 IP 回调
+
+---
+
 ## V 0.25.507 — UI/UX 改进 + ONVIF 增强 + Bug 修复
 
 **Tag**: `V0.25.507` · **Commit**: `b290e74` · **日期**: 2026-05-07

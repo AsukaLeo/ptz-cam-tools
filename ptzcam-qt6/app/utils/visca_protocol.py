@@ -36,13 +36,20 @@ VISCA_COMMAND = 0x01
 # Packet type: inquiry
 VISCA_INQUIRY = 0x09
 
-# Pan-tilt constants
-PAN_TILT_MAX_SPEED = 0x18  # max speed value (24 decimal)
-PAN_TILT_MIN_SPEED = 0x01
+# Pan-tilt direction values (standard VISCA)
+PAN_LEFT = 0x01
+PAN_RIGHT = 0x02
+PAN_STOP = 0x03
+TILT_DOWN = 0x01
+TILT_UP = 0x02
+TILT_STOP = 0x03
 
 # Zoom/Focus speed range
 ZOOM_MAX_SPEED = 0x07
 FOCUS_MAX_SPEED = 0x07
+
+# Max pan/tilt motor speed
+PAN_TILT_MAX_SPEED = 0x18  # 24 decimal
 
 
 # ---------------------------------------------------------------------------
@@ -57,29 +64,30 @@ def build_pan_tilt(pan_speed: int, tilt_speed: int,
                    pan_direction: int, tilt_direction: int) -> bytes:
     """Build a Pan-tilt Drive command.
 
-    Command: 81 01 06 01 VV WW 0Y 0X FF
-      VV = pan speed (0x01~0x18)
-      WW = tilt speed (0x01~0x18)
-      0Y = tilt direction (03=up, 01=down, 00=stop)
-      0X = pan direction (02=right, 01=left, 00=stop)
+    Sony VISCA standard format:
+      8x 01 06 01 VV WW 0Y 0X FF
+      VV = pan speed (0x01~0x18, 0x00=no command)
+      WW = tilt speed (0x01~0x18, 0x00=no command)
+      0Y = pan direction (01=left, 02=right, 03=stop)
+      0X = tilt direction (01=down, 02=up, 03=stop)
 
     Args:
         pan_speed: Pan speed 1~24.
         tilt_speed: Tilt speed 1~24.
-        pan_direction: 0=stop, 1=left, 2=right.
-        tilt_direction: 0=stop, 1=down, 3=up.
+        pan_direction: 0=no pan, 1=left, 2=right, 3=stop/center.
+        tilt_direction: 0=no tilt, 1=down, 2=up, 3=stop/center.
 
     Returns:
         VISCA command packet bytes.
     """
     packet = bytes([
-        VISCA_HEADER | 0x01,  # address
+        VISCA_HEADER | 0x01,  # address 1
         VISCA_COMMAND,         # command type
         0x06, 0x01,           # Pan-tilt Drive
         min(max(pan_speed, 0), PAN_TILT_MAX_SPEED),
         min(max(tilt_speed, 0), PAN_TILT_MAX_SPEED),
-        (tilt_direction & 0x03) | 0x00,
-        (pan_direction & 0x03) | 0x00,
+        (pan_direction & 0x03) | 0x00,   # 0Y = pan direction
+        (tilt_direction & 0x03) | 0x00,   # 0X = tilt direction
         VISCA_TERMINATOR,
     ])
     return packet
@@ -87,6 +95,8 @@ def build_pan_tilt(pan_speed: int, tilt_speed: int,
 
 def build_pan_tilt_stop() -> bytes:
     """Build a Pan-tilt Stop command.
+
+    Standard VISCA stop: speed=0, directions=03 03 (both stop).
 
     Command: 81 01 06 01 00 00 03 03 FF
 
@@ -114,7 +124,10 @@ def build_zoom(speed: int) -> bytes:
     """Build a Zoom command.
 
     Positive speed = Tele (zoom in), negative = Wide (zoom out).
-    Command: 81 01 04 07 2p FF (Tele: p=2-7, Wide: p=2-7)
+    Command format per protocol:
+      Stop:        81 01 04 07 00 FF
+      Tele (var):  81 01 04 07 2p FF  (p=0~7 speed)
+      Wide (var):  81 01 04 07 3p FF  (p=0~7 speed)
 
     Args:
         speed: Zoom speed. Positive=tele, negative=wide, 0=stop.
@@ -124,9 +137,9 @@ def build_zoom(speed: int) -> bytes:
         VISCA command packet bytes.
     """
     if speed > 0:
-        p = min(speed, ZOOM_MAX_SPEED)  # Tele
+        p = 0x20 | min(speed, ZOOM_MAX_SPEED)  # Tele (2p)
     elif speed < 0:
-        p = 0x20 | min(-speed, ZOOM_MAX_SPEED)  # Wide
+        p = 0x30 | min(-speed, ZOOM_MAX_SPEED)  # Wide (3p)
     else:
         p = 0x00  # Stop
 
@@ -139,7 +152,10 @@ def build_focus(speed: int) -> bytes:
     """Build a Focus command.
 
     Positive speed = Far, negative = Near.
-    Command: 81 01 04 08 3p FF (Far: p=2-7, Near: p=2-7)
+    Command format per protocol:
+      Stop:        81 01 04 08 00 FF
+      Far (var):   81 01 04 08 2p FF  (p=0~7 speed)
+      Near (var):  81 01 04 08 3p FF  (p=0~7 speed)
 
     Args:
         speed: Focus speed. Positive=far, negative=near, 0=stop.
@@ -149,9 +165,9 @@ def build_focus(speed: int) -> bytes:
         VISCA command packet bytes.
     """
     if speed > 0:
-        p = 0x20 | min(speed, FOCUS_MAX_SPEED)  # Far
+        p = 0x20 | min(speed, FOCUS_MAX_SPEED)  # Far (2p)
     elif speed < 0:
-        p = min(-speed, FOCUS_MAX_SPEED)  # Near
+        p = 0x30 | min(-speed, FOCUS_MAX_SPEED)  # Near (3p)
     else:
         p = 0x00  # Stop
 

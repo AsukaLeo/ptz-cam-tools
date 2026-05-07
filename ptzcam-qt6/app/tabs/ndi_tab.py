@@ -39,6 +39,7 @@ class NDITab(QWidget):
 
         # Callbacks (set externally)
         self.on_status_update: Optional[Callable[[str], None]] = None
+        self.on_visca_address: Optional[Callable[[str], None]] = None
         self.preview_widget: Optional[QWidget] = None
         self._on_video_info: Optional[Callable] = None
 
@@ -242,6 +243,18 @@ class NDITab(QWidget):
 
         source = self._discovered_sources[idx]
         self._logger.info(f"Connecting to NDI source: {source.name}")
+
+        # Auto-fill VISCA address with NDI source IP
+        if self.on_visca_address:
+            # NDI URL is typically just an IP address
+            ip_candidate = source.url.strip() if source.url else ""
+            if ip_candidate:
+                from urllib.parse import urlparse
+                # NDI URL might be just "ip" or "tcp://ip:port"
+                if "://" in ip_candidate:
+                    parsed = urlparse(ip_candidate)
+                    ip_candidate = parsed.hostname or ip_candidate
+                self.on_visca_address(ip_candidate)
 
         # Hide placeholder
         if hasattr(self.preview_widget, 'hide_placeholder'):

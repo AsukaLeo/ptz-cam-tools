@@ -41,6 +41,7 @@ class RTSPTab(QWidget):
 
         # Callbacks (set externally)
         self.on_status_update: Optional[Callable[[str], None]] = None
+        self.on_visca_address: Optional[Callable[[str], None]] = None
         self.preview_widget: Optional[QWidget] = None
         self._on_video_info: Optional[Callable] = None
 
@@ -268,6 +269,16 @@ class RTSPTab(QWidget):
             transport = self._proto_combo.currentText().lower()
 
         self._logger.info(f"Connecting RTSP: {url} ({transport})")
+
+        # Auto-fill VISCA address with RTSP URL's IP
+        if self.on_visca_address:
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                if parsed.hostname:
+                    self.on_visca_address(parsed.hostname)
+            except Exception:
+                pass
 
         # Hide placeholder
         if hasattr(self.preview_widget, 'hide_placeholder'):

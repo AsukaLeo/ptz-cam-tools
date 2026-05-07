@@ -36,9 +36,12 @@ class ViscaController:
     """
 
     # Default speeds
-    PAN_TILT_SPEED = 12   # medium speed (1~24)
-    ZOOM_SPEED = 3        # medium zoom speed (1~7)
-    FOCUS_SPEED = 3       # medium focus speed (1~7)
+    PAN_TILT_SPEED = 5    # default PTZ speed (1~24)
+    ZOOM_SPEED = 6        # default zoom speed (1~7)
+    FOCUS_SPEED = 6       # default focus speed (1~7)
+
+    # UDP retry: send stop commands multiple times to combat packet loss
+    _STOP_RETRY_COUNT = 3
 
     def __init__(self) -> None:
         """Initialize the controller."""
@@ -47,6 +50,7 @@ class ViscaController:
         self._logger = get_logger(__name__)
         self.on_status_update: Optional[Callable[[str], None]] = None
         self.is_connected = False
+        self.tilt_reverse: bool = False  # swap tilt up/down for some cameras
 
     # ------------------------------------------------------------------
     # Connection management
@@ -76,6 +80,7 @@ class ViscaController:
         self._transport = transport
         self._transport_type = "serial"
         self.is_connected = True
+        self._init_address()
         self._notify(f"VISCA 串口已连接: {port} @ {baud}")
         return True
 
@@ -98,6 +103,7 @@ class ViscaController:
         self._transport = transport
         self._transport_type = "udp"
         self.is_connected = True
+        self._init_address()
         self._notify(f"VISCA UDP 已连接: {host}:{port}")
         return True
 
@@ -120,6 +126,7 @@ class ViscaController:
         self._transport = transport
         self._transport_type = "tcp"
         self.is_connected = True
+        self._init_address()
         self._notify(f"VISCA TCP 已连接: {host}:{port}")
         return True
 
@@ -183,15 +190,12 @@ class ViscaController:
 
         Args:
             speed: Positive=tele(in), negative=wide(out), 0=stop.
-                   Default: +3 (tele).
 
         Returns:
             True if command sent.
         """
         if not self._ensure_connected():
             return False
-        if speed == 0:
-            speed = self.ZOOM_SPEED
         return self._send(build_zoom(speed))
 
     def focus(self, speed: int = 0) -> bool:
@@ -199,15 +203,12 @@ class ViscaController:
 
         Args:
             speed: Positive=far, negative=near, 0=stop.
-                   Default: +3 (far).
 
         Returns:
             True if command sent.
         """
         if not self._ensure_connected():
             return False
-        if speed == 0:
-            speed = self.FOCUS_SPEED
         return self._send(build_focus(speed))
 
     # ------------------------------------------------------------------
@@ -246,6 +247,21 @@ class ViscaController:
     # Internal
     # ------------------------------------------------------------------
 
+    def _init_address(self) -> None:
+        """Send VISCA address initialization command.
+
+        Broadcasts address 1 to the camera: 88 30 01 FF
+        This tells the camera to use address 1 so subsequent commands
+        with header 0x81 will be recognized.
+        """
+        from app.utils.visca_protocol import VISCA_BROADCAST, VISCA_TERMINATOR
+        addr_cmd = bytes([VISCA_BROADCAST, 0x30, 0x01, VISCA_TERMINATOR])
+        try:
+            self._transport.send(addr_cmd)
+            self._logger.info("VISCA address init sent: 88 30 01 FF")
+        except Exception as e:
+            self._logger.warning(f"Address init failed: {e}")
+
     def _ensure_connected(self) -> bool:
         """Check if transport is connected and log warning if not.
 
@@ -258,16 +274,20 @@ class ViscaController:
         return True
 
     def _send(self, cmd: bytes) -> bool:
-        """Send a VISCA command and check response.
+        """Send a VISCA command with retry for unreliable transports (UDP).
 
         Args:
             cmd: Command bytes.
 
         Returns:
-            True if command was sent (response checked non-blocking).
+            True if command was sent.
         """
         try:
-            self._transport.send(cmd)
+            # UDP is connectionless and may lose packets; retry to improve
+            # reliability. TCP and Serial are reliable, send once.
+            retries = self._STOP_RETRY_COUNT if self._transport_type == "udp" else 1
+            for _ in range(retries):
+                self._transport.send(cmd)
             return True
         except Exception as e:
             self._logger.error(f"Command send failed: {e}")
