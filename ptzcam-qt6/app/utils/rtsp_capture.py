@@ -161,14 +161,7 @@ class RTSPCaptureThread(QThread):
             self.state_changed.emit('error')
             return
 
-        # Set FFmpeg RTSP transport via environment variable (safer than URL param)
-        # URL param like ?transport=tcp is treated as part of the URI path by some cameras
-        import os as _os
-        if self._transport == "tcp":
-            _os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = 'rtsp_transport;tcp'
-        else:
-            _os.environ.pop('OPENCV_FFMPEG_CAPTURE_OPTIONS', None)
-
+        self._setup_transport_env()
         url = self._url
         attempts = 0
 
@@ -181,72 +174,15 @@ class RTSPCaptureThread(QThread):
                 cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
 
                 if not cap.isOpened():
-                    msg = f"无法连接 RTSP 流 (尝试 {attempts}/{self._MAX_RECONNECT_ATTEMPTS})"
-                    self._logger.warning(msg)
-                    if attempts <= self._MAX_RECONNECT_ATTEMPTS:
-                        self._reconnect_delay()
-                        continue
-                    self.error_occurred.emit("无法连接 RTSP 流")
-                    self.state_changed.emit('error')
+                    self._on_connect_failed(attempts)
                     return
 
                 self._logger.info(f"RTSP stream connected (attempt {attempts})")
                 self.state_changed.emit('connected')
-
-                # Main frame read loop
-                fail_count = 0
-                last_frame_time = time.perf_counter()
-                frame_count = 0
-
-                while not self._stop_flag:
-                    ret, frame = cap.read()
-
-                    if not ret:
-                        fail_count += 1
-                        if fail_count == 1:
-                            self._logger.warning("First RTSP read failed")
-                        elif fail_count % 30 == 0:
-                            self._logger.warning(
-                                f"RTSP read failed {fail_count} times"
-                            )
-
-                        # Timeout: no frame for too long
-                        elapsed = time.perf_counter() - last_frame_time
-                        if elapsed > self._FRAME_TIMEOUT_S:
-                            self._logger.error(
-                                f"RTSP stream timeout ({elapsed:.0f}s no frame)"
-                            )
-                            raise TimeoutError(f"无数据 {elapsed:.0f} 秒")
-
-                        if fail_count >= self._MAX_READ_FAILURES:
-                            self._logger.error(
-                                f"Too many read failures ({fail_count})"
-                            )
-                            raise ConnectionError("连续读取失败")
-
-                        time.sleep(0.01)  # Prevent busy-loop on fast failures
-                        continue
-
-                    # Successful read
-                    capture_ts = time.perf_counter()
-                    fail_count = 0
-                    last_frame_time = capture_ts
-                    frame_count += 1
-
-                    image = self._cv_frame_to_qimage(frame)
-                    if image:
-                        self.frame_ready.emit(image, capture_ts)
-                    else:
-                        self._logger.warning("Failed to convert RTSP frame to QImage")
+                self._read_frame_loop(cap)
 
             except (TimeoutError, ConnectionError) as e:
-                self._logger.warning(f"Stream issue: {e}")
-                if attempts <= self._MAX_RECONNECT_ATTEMPTS:
-                    self.error_occurred.emit(f"流异常: {e}，正在重连...")
-                    self._reconnect_delay()
-                    continue
-                self.error_occurred.emit(f"流已断开，重连失败")
-                break
+                self._on_stream_error(e, attempts)
 
             except Exception as e:
                 self._logger.error(f"RTSP capture error: {e}")
@@ -260,10 +196,92 @@ class RTSPCaptureThread(QThread):
                 if cap:
                     cap.release()
 
-            # If we reach here, the stream ended cleanly (not by reconnect logic)
-            break
+            break  # Clean exit
 
         self.state_changed.emit('disconnected')
+
+    def _setup_transport_env(self) -> None:
+        """Set FFmpeg RTSP transport via environment variable."""
+        import os as _os
+        if self._transport == "tcp":
+            _os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = 'rtsp_transport;tcp'
+        else:
+            _os.environ.pop('OPENCV_FFMPEG_CAPTURE_OPTIONS', None)
+
+    def _on_connect_failed(self, attempts: int) -> None:
+        """Handle connection failure after max retries.
+
+        Args:
+            attempts: Number of attempts made.
+        """
+        msg = f"无法连接 RTSP 流 (尝试 {attempts}/{self._MAX_RECONNECT_ATTEMPTS})"
+        self._logger.warning(msg)
+        if attempts <= self._MAX_RECONNECT_ATTEMPTS:
+            self._reconnect_delay()
+            return
+        self.error_occurred.emit("无法连接 RTSP 流")
+        self.state_changed.emit('error')
+
+    def _read_frame_loop(self, cap: 'cv2.VideoCapture') -> None:
+        """Read frames in a loop until stop or error.
+
+        Args:
+            cap: OpenCV VideoCapture object.
+
+        Raises:
+            TimeoutError: If no frame received for too long.
+            ConnectionError: If too many consecutive read failures.
+        """
+        fail_count = 0
+        last_frame_time = time.perf_counter()
+        frame_count = 0
+
+        while not self._stop_flag:
+            ret, frame = cap.read()
+
+            if not ret:
+                fail_count += 1
+                if fail_count == 1:
+                    self._logger.warning("First RTSP read failed")
+                elif fail_count % 30 == 0:
+                    self._logger.warning(f"RTSP read failed {fail_count} times")
+
+                elapsed = time.perf_counter() - last_frame_time
+                if elapsed > self._FRAME_TIMEOUT_S:
+                    self._logger.error(f"RTSP stream timeout ({elapsed:.0f}s no frame)")
+                    raise TimeoutError(f"无数据 {elapsed:.0f} 秒")
+
+                if fail_count >= self._MAX_READ_FAILURES:
+                    self._logger.error(f"Too many read failures ({fail_count})")
+                    raise ConnectionError("连续读取失败")
+
+                time.sleep(0.01)
+                continue
+
+            capture_ts = time.perf_counter()
+            fail_count = 0
+            last_frame_time = capture_ts
+            frame_count += 1
+
+            image = self._cv_frame_to_qimage(frame)
+            if image:
+                self.frame_ready.emit(image, capture_ts)
+            else:
+                self._logger.warning("Failed to convert RTSP frame to QImage")
+
+    def _on_stream_error(self, error: Exception, attempts: int) -> None:
+        """Handle stream error with optional reconnect.
+
+        Args:
+            error: The exception that occurred.
+            attempts: Current reconnect attempt number.
+        """
+        self._logger.warning(f"Stream issue: {error}")
+        if attempts <= self._MAX_RECONNECT_ATTEMPTS:
+            self.error_occurred.emit(f"流异常: {error}，正在重连...")
+            self._reconnect_delay()
+        else:
+            self.error_occurred.emit("流已断开，重连失败")
 
     def stop(self) -> None:
         """Request thread to stop at the next opportunity."""

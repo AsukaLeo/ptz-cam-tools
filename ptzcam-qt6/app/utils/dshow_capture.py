@@ -7,12 +7,10 @@ including H264 format support.
 import sys
 import ctypes
 import time
-from ctypes import wintypes
-from typing import List, Optional, Tuple, Callable
+from typing import List, Optional, Callable
 from dataclasses import dataclass
-from enum import IntEnum
 
-from PySide6.QtCore import QObject, Signal, QThread, QMutex, QWaitCondition
+from PySide6.QtCore import QObject, Signal, QThread
 from PySide6.QtGui import QImage
 
 from app.utils.logger import get_logger

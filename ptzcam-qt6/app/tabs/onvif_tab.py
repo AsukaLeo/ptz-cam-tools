@@ -11,8 +11,8 @@ from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QImage
 
 from app.styles.theme import (
-    get_control_card_style, get_primary_button_style,
-    get_danger_button_style, get_standard_button_style,
+    get_primary_button_style, get_danger_button_style,
+    get_standard_button_style,
 )
 from app.utils.network_utils import get_nic_choices
 from app.utils.onvif_device import (
@@ -20,6 +20,7 @@ from app.utils.onvif_device import (
 )
 from app.utils.rtsp_capture import RTSPSource
 from app.utils.logger import get_logger
+from app.widgets import ControlCard
 
 
 class ONVIFTab(QWidget):
@@ -96,110 +97,66 @@ class ONVIFTab(QWidget):
         Returns:
             Configured control card widget.
         """
-        card = QFrame()
-        card.setObjectName("controlCard")
-        card.setStyleSheet(get_control_card_style())
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(12, 10, 12, 10)
-        card_layout.setSpacing(6)
+        card = ControlCard()
 
-        # Center content vertically within the fixed-height card
-        card_layout.addStretch(1)
+        # Row 1: Device discovery
+        row = card.add_row()
+        row.addWidget(ControlCard.make_label("设备:"))
 
-        # --- Row 1: Device discovery ---
-        dev_row = QHBoxLayout()
-        dev_row.setSpacing(8)
-
-        dev_label = QLabel("设备:")
-        dev_label.setFixedWidth(80)
-        dev_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        dev_row.addWidget(dev_label)
-
-        self._device_combo = QComboBox()
-        self._device_combo.setFixedWidth(320)
+        self._device_combo = ControlCard.make_combo(320)
         self._device_combo.addItem("(点击发现搜索 ONVIF 设备)")
         self._device_combo.currentIndexChanged.connect(self._on_device_selected)
-        dev_row.addWidget(self._device_combo)
+        row.addWidget(self._device_combo)
 
         self._discover_btn = QPushButton("发现")
         self._discover_btn.setStyleSheet(get_standard_button_style())
         self._discover_btn.clicked.connect(self._discover_devices)
-        dev_row.addWidget(self._discover_btn)
+        row.addWidget(self._discover_btn)
 
         self._connect_btn = QPushButton("连接")
         self._connect_btn.setStyleSheet(get_primary_button_style())
         self._connect_btn.clicked.connect(self._connect_device)
         self._connect_btn.setEnabled(False)
-        dev_row.addWidget(self._connect_btn)
+        row.addWidget(self._connect_btn)
 
         self._disconnect_btn = QPushButton("断开")
         self._disconnect_btn.setStyleSheet(get_danger_button_style())
         self._disconnect_btn.clicked.connect(self._disconnect_device)
         self._disconnect_btn.setEnabled(False)
-        dev_row.addWidget(self._disconnect_btn)
+        row.addWidget(self._disconnect_btn)
+        ControlCard.add_stretch(row)
 
-        dev_row.addStretch()
-        card_layout.addLayout(dev_row)
-
-        # --- Row 2: Connection details ---
-        detail_row = QHBoxLayout()
-        detail_row.setSpacing(8)
-
-        ip_label = QLabel("IP 地址:")
-        ip_label.setFixedWidth(80)
-        ip_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        detail_row.addWidget(ip_label)
+        # Row 2: Connection details
+        row = card.add_row()
+        row.addWidget(ControlCard.make_label("IP 地址:"))
 
         self._ip_edit = QLineEdit("192.168.2.254")
         self._ip_edit.setFixedWidth(120)
-        detail_row.addWidget(self._ip_edit)
+        row.addWidget(self._ip_edit)
 
-        port_label = QLabel("端口:")
-        port_label.setFixedWidth(40)
-        detail_row.addWidget(port_label)
-
+        row.addWidget(ControlCard.make_label("端口:", 40))
         self._port_edit = QLineEdit("8000")
         self._port_edit.setFixedWidth(60)
-        detail_row.addWidget(self._port_edit)
+        row.addWidget(self._port_edit)
 
-        user_label = QLabel("用户:")
-        user_label.setFixedWidth(40)
-        detail_row.addWidget(user_label)
-
+        row.addWidget(ControlCard.make_label("用户:", 40))
         self._user_edit = QLineEdit("admin")
         self._user_edit.setFixedWidth(100)
-        detail_row.addWidget(self._user_edit)
+        row.addWidget(self._user_edit)
 
-        pass_label = QLabel("密码:")
-        pass_label.setFixedWidth(40)
-        detail_row.addWidget(pass_label)
-
+        row.addWidget(ControlCard.make_label("密码:", 40))
         self._pass_edit = QLineEdit()
         self._pass_edit.setEchoMode(QLineEdit.Password)
         self._pass_edit.setFixedWidth(100)
-        detail_row.addWidget(self._pass_edit)
+        row.addWidget(self._pass_edit)
+        ControlCard.add_stretch(row)
 
-        detail_row.addStretch()
-        card_layout.addLayout(detail_row)
-
-        # --- Row 3: Network interface ---
-        nic_row = QHBoxLayout()
-        nic_row.setSpacing(8)
-
-        nic_label = QLabel("网卡:")
-        nic_label.setFixedWidth(80)
-        nic_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        nic_row.addWidget(nic_label)
-
-        self._net_combo = QComboBox()
-        self._net_combo.setFixedWidth(280)
-        nic_row.addWidget(self._net_combo)
-
-        nic_row.addStretch()
-        card_layout.addLayout(nic_row)
-
-        card_layout.addStretch(1)
-        card.setFixedHeight(120)
+        # Row 3: Network interface
+        row = card.add_row()
+        row.addWidget(ControlCard.make_label("网卡:"))
+        self._net_combo = ControlCard.make_combo(280)
+        row.addWidget(self._net_combo)
+        ControlCard.add_stretch(row)
 
         # Populate NIC choices
         self._refresh_nic_list()

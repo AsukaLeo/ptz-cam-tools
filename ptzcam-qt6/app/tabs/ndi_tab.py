@@ -11,12 +11,13 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage
 
 from app.styles.theme import (
-    get_control_card_style, get_primary_button_style,
-    get_danger_button_style, get_standard_button_style,
+    get_primary_button_style, get_danger_button_style,
+    get_standard_button_style,
 )
 from app.utils.network_utils import get_nic_choices
 from app.utils.ndi_capture import NDISourceFinder, NDICapture, NDISource
 from app.utils.logger import get_logger
+from app.widgets import ControlCard
 
 
 class NDITab(QWidget):
@@ -86,68 +87,40 @@ class NDITab(QWidget):
         Returns:
             Configured control card widget.
         """
-        card = QFrame()
-        card.setObjectName("controlCard")
-        card.setStyleSheet(get_control_card_style())
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(12, 10, 12, 10)
-        card_layout.setSpacing(6)
-
-        # Center content vertically within the fixed-height card
-        card_layout.addStretch(1)
+        card = ControlCard()
 
         # Source row
-        src_row = QHBoxLayout()
-        src_row.setSpacing(8)
+        row = card.add_row()
+        row.addWidget(ControlCard.make_label("NDI 源:"))
 
-        src_label = QLabel("NDI 源:")
-        src_label.setFixedWidth(80)
-        src_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        src_row.addWidget(src_label)
-
-        self._src_combo = QComboBox()
+        self._src_combo = ControlCard.make_combo(280)
         self._src_combo.addItem("(点击刷新搜索 NDI 源)")
-        self._src_combo.setFixedWidth(280)
-        src_row.addWidget(self._src_combo)
+        row.addWidget(self._src_combo)
 
         self._refresh_btn = QPushButton("刷新")
         self._refresh_btn.setStyleSheet(get_standard_button_style())
         self._refresh_btn.clicked.connect(self._discover_sources)
-        src_row.addWidget(self._refresh_btn)
+        row.addWidget(self._refresh_btn)
 
         self._connect_btn = QPushButton("连接")
         self._connect_btn.setStyleSheet(get_primary_button_style())
         self._connect_btn.clicked.connect(self._connect_ndi)
         self._connect_btn.setEnabled(False)
-        src_row.addWidget(self._connect_btn)
+        row.addWidget(self._connect_btn)
 
         self._disconnect_btn = QPushButton("断开")
         self._disconnect_btn.setStyleSheet(get_danger_button_style())
         self._disconnect_btn.clicked.connect(self._disconnect_ndi)
         self._disconnect_btn.setEnabled(False)
-        src_row.addWidget(self._disconnect_btn)
-
-        src_row.addStretch()
-        card_layout.addLayout(src_row)
+        row.addWidget(self._disconnect_btn)
+        ControlCard.add_stretch(row)
 
         # NIC row
-        nic_row = QHBoxLayout()
-        nic_row.setSpacing(8)
-
-        nic_label = QLabel("网卡:")
-        nic_label.setFixedWidth(80)
-        nic_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        nic_row.addWidget(nic_label)
-
-        self._net_combo = QComboBox()
-        self._net_combo.setFixedWidth(280)
-        nic_row.addWidget(self._net_combo)
-
-        nic_row.addStretch()
-        card_layout.addLayout(nic_row)
-
-        card_layout.addStretch(1)
-        card.setFixedHeight(120)
+        row = card.add_row()
+        row.addWidget(ControlCard.make_label("网卡:"))
+        self._net_combo = ControlCard.make_combo(280)
+        row.addWidget(self._net_combo)
+        ControlCard.add_stretch(row)
 
         # Populate NIC choices
         self._refresh_nic_list()
@@ -246,14 +219,17 @@ class NDITab(QWidget):
 
         # Auto-fill VISCA address with NDI source IP
         if self.on_visca_address:
-            # NDI URL is typically just an IP address
             ip_candidate = source.url.strip() if source.url else ""
             if ip_candidate:
                 from urllib.parse import urlparse
-                # NDI URL might be just "ip" or "tcp://ip:port"
+                # NDI URL formats: "ip", "ip:port", "tcp://ip:port"
                 if "://" in ip_candidate:
                     parsed = urlparse(ip_candidate)
                     ip_candidate = parsed.hostname or ip_candidate
+                else:
+                    # Strip port if present (e.g. "192.168.1.100:5960")
+                    if ":" in ip_candidate:
+                        ip_candidate = ip_candidate.split(":")[0]
                 self.on_visca_address(ip_candidate)
 
         # Hide placeholder

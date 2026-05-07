@@ -11,11 +11,12 @@ from PySide6.QtCore import Qt, QEvent, QTimer
 from PySide6.QtGui import QImage
 
 from app.styles.theme import (
-    get_control_card_style, get_primary_button_style, get_danger_button_style
+    get_primary_button_style, get_danger_button_style
 )
 from app.utils.network_utils import get_nic_choices
 from app.utils.rtsp_capture import RTSPSource
 from app.utils.logger import get_logger
+from app.widgets import ControlCard
 
 
 class RTSPTab(QWidget):
@@ -89,91 +90,56 @@ class RTSPTab(QWidget):
         Returns:
             Configured control card widget.
         """
-        card = QFrame()
-        card.setObjectName("controlCard")
-        card.setStyleSheet(get_control_card_style())
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(12, 10, 12, 10)
-        card_layout.setSpacing(6)
+        card = ControlCard()
 
-        # --- Row 1: URL + Connect/Disconnect buttons ---
-        url_row = QHBoxLayout()
-        url_row.setSpacing(8)
-
-        url_label = QLabel("RTSP URL:")
-        url_label.setFixedWidth(80)
-        url_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        url_row.addWidget(url_label)
-
+        # Row 1: URL + Connect/Disconnect buttons
+        row = card.add_row()
+        row.addWidget(ControlCard.make_label("RTSP URL:"))
         self._url_edit = QLineEdit("rtsp://192.168.2.254/PSIA/Streaming/channels/h264")
         self._url_edit.setFixedWidth(350)
         self._setup_line_edit(self._url_edit)
-        url_row.addWidget(self._url_edit)
+        row.addWidget(self._url_edit)
 
         self._connect_btn = QPushButton("连接")
         self._connect_btn.setStyleSheet(get_primary_button_style())
         self._connect_btn.clicked.connect(self._connect_rtsp)
-        url_row.addWidget(self._connect_btn)
+        row.addWidget(self._connect_btn)
 
         self._disconnect_btn = QPushButton("断开")
         self._disconnect_btn.setStyleSheet(get_danger_button_style())
         self._disconnect_btn.clicked.connect(self._disconnect_rtsp)
         self._disconnect_btn.setEnabled(False)
-        url_row.addWidget(self._disconnect_btn)
+        row.addWidget(self._disconnect_btn)
+        ControlCard.add_stretch(row)
 
-        url_row.addStretch()
-        card_layout.addLayout(url_row)
-
-        # --- Row 2: Authentication ---
-        auth_row = QHBoxLayout()
-        auth_row.setSpacing(8)
-
-        user_label = QLabel("用户名:")
-        user_label.setFixedWidth(80)
-        user_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        auth_row.addWidget(user_label)
-
+        # Row 2: Authentication
+        row = card.add_row()
+        row.addWidget(ControlCard.make_label("用户名:"))
         self._user_edit = QLineEdit()
         self._user_edit.setPlaceholderText("admin")
         self._user_edit.setFixedWidth(120)
         self._setup_line_edit(self._user_edit)
-        auth_row.addWidget(self._user_edit)
+        row.addWidget(self._user_edit)
 
-        pass_label = QLabel("密码:")
-        pass_label.setFixedWidth(50)
-        auth_row.addWidget(pass_label)
-
+        row.addWidget(ControlCard.make_label("密码:", 50))
         self._pass_edit = QLineEdit()
         self._pass_edit.setEchoMode(QLineEdit.Password)
         self._pass_edit.setFixedWidth(120)
         self._setup_line_edit(self._pass_edit)
-        auth_row.addWidget(self._pass_edit)
+        row.addWidget(self._pass_edit)
+        ControlCard.add_stretch(row)
 
-        auth_row.addStretch()
-        card_layout.addLayout(auth_row)
-
-        # --- Row 3: Network interface + Transport protocol ---
-        net_row = QHBoxLayout()
-        net_row.setSpacing(8)
-
-        net_label = QLabel("网卡:")
-        net_label.setFixedWidth(80)
-        net_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        net_row.addWidget(net_label)
-
-        self._net_combo = QComboBox()
-        self._net_combo.setFixedWidth(280)
-        net_row.addWidget(self._net_combo)
+        # Row 3: Network interface + Transport protocol
+        row = card.add_row()
+        row.addWidget(ControlCard.make_label("网卡:"))
+        self._net_combo = ControlCard.make_combo(280)
+        row.addWidget(self._net_combo)
 
         self._proto_combo = QComboBox()
         self._proto_combo.addItems(["UDP", "TCP"])
         self._proto_combo.setToolTip("UDP: 低延迟, 可能丢包\nTCP: 更稳定, 延迟稍高")
-        net_row.addWidget(self._proto_combo)
-
-        net_row.addStretch()
-        card_layout.addLayout(net_row)
-
-        card.setFixedHeight(120)
+        row.addWidget(self._proto_combo)
+        ControlCard.add_stretch(row)
 
         return card
 

@@ -7,11 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from typing import Optional, Callable
 
-from app.styles.theme import get_ptz_panel_style, get_standard_button_style
-from app.utils.constants import (
-    PTZ_HOME, PTZ_STOP, PTZ_UP, PTZ_DOWN, PTZ_LEFT, PTZ_RIGHT,
-)
-
+from app.styles.theme import get_ptz_panel_style
 
 class PTZPanel(QFrame):
     """PTZ (Pan-Tilt-Zoom) control panel widget.

@@ -8,19 +8,18 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 from typing import Optional, Callable
 
-from app.styles.theme import get_control_card_style, get_primary_button_style, get_danger_button_style, get_standard_button_style
 from app.utils.device_manager import DeviceManager, CameraDevice
 from app.utils.dshow_capture import (
     DirectShowCapture, DShowDevice, DShowFormat,
     build_dshow_device_from_qt, FOURCC_H264
 )
 from app.utils.logger import get_logger
+from app.styles.theme import (
+    get_standard_button_style, get_primary_button_style, get_danger_button_style,
+)
+from app.widgets import ControlCard
 
 import psutil
-
-
-# Import QLabel for frame display
-from PySide6.QtWidgets import QLabel
 
 
 class USBTab(QWidget):
@@ -89,93 +88,59 @@ class USBTab(QWidget):
     
     def _create_control_card(self) -> QWidget:
         """Create the control card with device and parameter controls.
-        
+
         Returns:
             Configured control card widget.
         """
-        card = QFrame()
-        card.setObjectName("controlCard")
-        card.setStyleSheet(get_control_card_style())
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(12, 10, 12, 10)
-        card_layout.setSpacing(6)
-        
+        card = ControlCard()
+
         # Device row
-        device_row = QHBoxLayout()
-        device_row.setSpacing(8)
-        
-        device_label = QLabel("设备:")
-        device_label.setFixedWidth(80)
-        device_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        device_row.addWidget(device_label)
-        
-        self.device_combo = QComboBox()
-        self.device_combo.setFixedWidth(220)
+        row = card.add_row()
+
+        row.addWidget(ControlCard.make_label("设备:"))
+        self.device_combo = ControlCard.make_combo(220)
         self.device_combo.setPlaceholderText("正在检测设备...")
-        device_row.addWidget(self.device_combo)
-        
+        row.addWidget(self.device_combo)
+
         self.refresh_btn = QPushButton("刷新")
         self.refresh_btn.setStyleSheet(get_standard_button_style())
         self.refresh_btn.setToolTip("重新检测 USB 摄像头设备")
         self.refresh_btn.clicked.connect(self._enumerate_devices)
-        device_row.addWidget(self.refresh_btn)
-        
+        row.addWidget(self.refresh_btn)
+
         self.play_btn = QPushButton("播放")
         self.play_btn.setStyleSheet(get_primary_button_style())
         self.play_btn.setToolTip("开始/停止视频预览")
         self.play_btn.clicked.connect(self._toggle_playback)
         self.play_btn.setEnabled(False)
-        device_row.addWidget(self.play_btn)
-        
-        device_row.addStretch()
-        card_layout.addLayout(device_row)
-        
+        row.addWidget(self.play_btn)
+
+        ControlCard.add_stretch(row)
+
         # Parameters row
-        param_row = QHBoxLayout()
-        param_row.setSpacing(8)
-        
-        # Resolution
-        lbl1 = QLabel("分辨率:")
-        lbl1.setFixedWidth(80)
-        lbl1.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        param_row.addWidget(lbl1)
-        
-        self.res_combo = QComboBox()
-        self.res_combo.setFixedWidth(140)
+        row = card.add_row()
+
+        row.addWidget(ControlCard.make_label("分辨率:"))
+        self.res_combo = ControlCard.make_combo(140)
         self.res_combo.setMaxVisibleItems(12)
         self.res_combo.setEnabled(False)
         self.res_combo.currentIndexChanged.connect(self._on_resolution_changed)
-        param_row.addWidget(self.res_combo)
-        
-        # Format
-        lbl2 = QLabel("格式:")
-        lbl2.setFixedWidth(50)
-        lbl2.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        param_row.addWidget(lbl2)
-        
-        self.fmt_combo = QComboBox()
-        self.fmt_combo.setFixedWidth(100)
+        row.addWidget(self.res_combo)
+
+        row.addWidget(ControlCard.make_label("格式:", 50))
+        self.fmt_combo = ControlCard.make_combo(100)
         self.fmt_combo.setMaxVisibleItems(8)
         self.fmt_combo.setEnabled(False)
-        param_row.addWidget(self.fmt_combo)
-        
-        # Frame rate
-        lbl3 = QLabel("帧率:")
-        lbl3.setFixedWidth(50)
-        lbl3.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        param_row.addWidget(lbl3)
-        
-        self.fps_combo = QComboBox()
-        self.fps_combo.setFixedWidth(90)
+        row.addWidget(self.fmt_combo)
+
+        row.addWidget(ControlCard.make_label("帧率:", 50))
+        self.fps_combo = ControlCard.make_combo(90)
         self.fps_combo.setMaxVisibleItems(10)
         self.fps_combo.setEnabled(False)
-        param_row.addWidget(self.fps_combo)
-        
-        param_row.addStretch()
-        card_layout.addLayout(param_row)
-        
-        card.setFixedHeight(120)
-        
+        row.addWidget(self.fps_combo)
+
+        ControlCard.add_stretch(row)
+
         return card
     
     def set_preview_widget(self, widget: QWidget) -> None:
