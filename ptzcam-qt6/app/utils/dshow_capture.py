@@ -241,12 +241,6 @@ class DirectShowCapture(QObject):
 
             if best:
                 self._camera.setCameraFormat(best)
-                actual = best.resolution()
-                self._logger.info(
-                    f"Camera format: {actual.width()}x{actual.height()}"
-                    f" @ {best.maxFrameRate():.0f}fps"
-                    f" (requested {target_w}x{target_h} @ {target_fps:.0f}fps)"
-                )
 
         self._session = QMediaCaptureSession()
         self._sink = QVideoSink()

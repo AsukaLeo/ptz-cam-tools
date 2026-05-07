@@ -254,12 +254,12 @@ class RTSPTab(QWidget):
         self._set_controls_enabled(False)
 
         # Start capture
-        self._rtsp_source.start(url, transport)
+        self._rtsp_source.connect_to(url)
 
     def _disconnect_rtsp(self) -> None:
         """Disconnect RTSP stream."""
         self._logger.info("Disconnecting RTSP stream")
-        self._rtsp_source.stop()
+        self._rtsp_source.disconnect()
         self._update_ui_stopped()
 
     def _on_frame_ready(self, image: QImage, capture_time: float) -> None:

@@ -341,12 +341,12 @@ class ONVIFTab(QWidget):
             self.preview_widget.hide_placeholder()
 
         # Start RTSP capture
-        self._rtsp_source.start(rtsp_url, transport="tcp")
+        self._rtsp_source.connect_to(rtsp_url)
 
     def _disconnect_device(self) -> None:
         """Disconnect from the ONVIF device."""
         self._logger.info("Disconnecting ONVIF")
-        self._rtsp_source.stop()
+        self._rtsp_source.disconnect()
 
         if self._onvif_conn:
             self._onvif_conn.disconnect()
