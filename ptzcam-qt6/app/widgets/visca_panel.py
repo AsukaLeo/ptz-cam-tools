@@ -224,9 +224,12 @@ class VISCAPanel(QFrame):
         grid.addWidget(self._net_addr, 0, 3)
 
         # Direction reverse toggle (compact, right of address)
-        self._tilt_reverse_btn = QPushButton("反转 \u2714")
+        self._tilt_reverse_btn = QPushButton("方向反转 \u2714")
         self._tilt_reverse_btn.setCheckable(True)
         self._tilt_reverse_btn.setChecked(True)
+        self._tilt_reverse_btn.setSizePolicy(
+            QPushButton.SizePolicy.Minimum, QPushButton.SizePolicy.Fixed
+        )
         self._tilt_reverse_btn.setToolTip("部分 VISCA 协议上下方向相反时取消勾选")
         self._tilt_reverse_btn.setStyleSheet("""
             QPushButton {

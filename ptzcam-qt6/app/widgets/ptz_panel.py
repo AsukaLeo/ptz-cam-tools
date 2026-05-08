@@ -46,6 +46,7 @@ class PTZPanel(QFrame):
         self._selected_preset_id = -1
 
         self._setup_ui()
+        self.set_connected(False)  # Start disabled until VISCA connects
 
     def _setup_ui(self) -> None:
         """Set up the panel UI."""
@@ -86,7 +87,6 @@ class PTZPanel(QFrame):
             controller: ViscaController instance.
         """
         self._controller = controller
-        self.setEnabled(False)  # Start disabled
 
     def set_connected(self, connected: bool) -> None:
         """Enable/disable all PTZ controls based on VISCA connection state.
