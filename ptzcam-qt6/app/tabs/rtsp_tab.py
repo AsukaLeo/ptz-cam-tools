@@ -91,12 +91,12 @@ class RTSPTab(QWidget):
 
     def _create_help_card(self) -> QWidget:
         """Create help card with usage instructions."""
-        return HelpCard("RTSP 使用说明", [
-            "1. 输入 RTSP 流媒体地址",
-            "2. 如有认证需填写用户名和密码",
-            "3. 选择传输协议（UDP/TCP）",
-            "4. 点击「连接」开始拉流",
-            "5. 点击「断开」停止播放",
+        return HelpCard(tr("RTSP 使用说明"), [
+            tr("1. 输入 RTSP 流媒体地址"),
+            tr("2. 如有认证需填写用户名和密码"),
+            tr("3. 选择传输协议（UDP/TCP）"),
+            tr("4. 点击「连接」开始拉流"),
+            tr("5. 点击「断开」停止播放"),
         ])
 
     def _create_control_card(self) -> QWidget:
@@ -391,7 +391,7 @@ class RTSPTab(QWidget):
             self._is_playing = True
             self._notify_status("RTSP 已连接")
             if self._connect_btn:
-                self._connect_btn.setText("已连接")
+                self._connect_btn.setText(tr("已连接"))
                 self._connect_btn.setEnabled(False)
             if self._disconnect_btn:
                 self._disconnect_btn.setEnabled(True)
@@ -413,7 +413,7 @@ class RTSPTab(QWidget):
         self._set_controls_enabled(True)
 
         if self._connect_btn:
-            self._connect_btn.setText("连接")
+            self._connect_btn.setText(tr("连接"))
             self._connect_btn.setEnabled(True)
         if self._disconnect_btn:
             self._disconnect_btn.setEnabled(False)

@@ -93,12 +93,12 @@ class USBTab(QWidget):
     
     def _create_help_card(self) -> QWidget:
         """Create help card with usage instructions."""
-        return HelpCard("USB 使用说明", [
-            "1. 下拉选择 USB 摄像头设备",
-            "2. 点击「播放」开始预览",
-            "3. 点击「停止」结束预览",
-            "4. 可切换分辨率、格式和帧率",
-            "5. 点「刷新」重新检测设备",
+        return HelpCard(tr("USB 使用说明"), [
+            tr("1. 下拉选择 USB 摄像头设备"),
+            tr("2. 点击「播放」开始预览"),
+            tr("3. 点击「停止」结束预览"),
+            tr("4. 可切换分辨率、格式和帧率"),
+            tr("5. 点「刷新」重新检测设备"),
         ])
 
     def _create_control_card(self) -> QWidget:
@@ -397,7 +397,7 @@ class USBTab(QWidget):
         success = self._dshow_capture.start_capture(device, selected_format)
         
         if success:
-            self.play_btn.setText("停止")
+            self.play_btn.setText(tr("停止"))
             self.play_btn.setStyleSheet(get_danger_button_style())
             self._is_playing = True
             self._notify_status("视频播放中")
@@ -429,7 +429,7 @@ class USBTab(QWidget):
             self.preview_widget.show_placeholder()
         
         # Update UI
-        self.play_btn.setText("播放")
+        self.play_btn.setText(tr("播放"))
         self.play_btn.setStyleSheet(get_primary_button_style())
         self.device_combo.setEnabled(True)
         self.refresh_btn.setEnabled(True)

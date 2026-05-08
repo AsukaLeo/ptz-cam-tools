@@ -98,12 +98,12 @@ class ONVIFTab(QWidget):
 
     def _create_help_card(self) -> QWidget:
         """Create help card with usage instructions."""
-        return HelpCard("ONVIF 使用说明", [
-            "1. 点击「发现」搜索网络设备",
-            "2. 下拉选择目标 ONVIF 设备",
-            "3. 可输入自定义 IP 和凭据",
-            "4. 点击「连接」自动探测配置",
-            "5. 凭据错误将自动尝试常见默认值",
+        return HelpCard(tr("ONVIF 使用说明"), [
+            tr("1. 点击「发现」搜索网络设备"),
+            tr("2. 下拉选择目标 ONVIF 设备"),
+            tr("3. 可输入自定义 IP 和凭据"),
+            tr("4. 点击「连接」自动探测配置"),
+            tr("5. 凭据错误将自动尝试常见默认值"),
         ])
 
     def _create_control_card(self) -> QWidget:
@@ -444,7 +444,7 @@ class ONVIFTab(QWidget):
             self._is_playing = True
             self._notify_status("ONVIF 已连接")
             if self._connect_btn:
-                self._connect_btn.setText("已连接")
+                self._connect_btn.setText(tr("已连接"))
                 self._connect_btn.setEnabled(False)
             if self._disconnect_btn:
                 self._disconnect_btn.setEnabled(True)
@@ -464,7 +464,7 @@ class ONVIFTab(QWidget):
         self._set_controls_enabled(True)
 
         if self._connect_btn:
-            self._connect_btn.setText("连接")
+            self._connect_btn.setText(tr("连接"))
             self._connect_btn.setEnabled(len(self._discovered_devices) > 0)
         if self._disconnect_btn:
             self._disconnect_btn.setEnabled(False)

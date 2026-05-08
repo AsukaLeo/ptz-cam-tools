@@ -88,12 +88,12 @@ class NDITab(QWidget):
 
     def _create_help_card(self) -> QWidget:
         """Create help card with usage instructions."""
-        return HelpCard("NDI 使用说明", [
-            "1. 点击「刷新」搜索网络 NDI 源",
-            "2. 下拉选择目标 NDI 设备",
-            "3. 点击「连接」开始接收视频",
-            "4. 非授权设备 15 分钟后可能断流",
-            "5. 5 秒无帧将提示可能为试用版",
+        return HelpCard(tr("NDI 使用说明"), [
+            tr("1. 点击「刷新」搜索网络 NDI 源"),
+            tr("2. 下拉选择目标 NDI 设备"),
+            tr("3. 点击「连接」开始接收视频"),
+            tr("4. 非授权设备 15 分钟后可能断流"),
+            tr("5. 5 秒无帧将提示可能为试用版"),
         ])
 
     def _create_control_card(self) -> QWidget:
@@ -350,7 +350,7 @@ class NDITab(QWidget):
             self._is_playing = True
             self._notify_status("NDI 已连接")
             if self._connect_btn:
-                self._connect_btn.setText("已连接")
+                self._connect_btn.setText(tr("已连接"))
                 self._connect_btn.setEnabled(False)
             if self._disconnect_btn:
                 self._disconnect_btn.setEnabled(True)
@@ -372,7 +372,7 @@ class NDITab(QWidget):
         self._set_controls_enabled(True)
 
         if self._connect_btn:
-            self._connect_btn.setText("连接")
+            self._connect_btn.setText(tr("连接"))
             self._connect_btn.setEnabled(len(self._discovered_sources) > 0)
         if self._disconnect_btn:
             self._disconnect_btn.setEnabled(False)

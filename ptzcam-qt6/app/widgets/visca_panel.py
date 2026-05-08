@@ -348,14 +348,14 @@ class VISCAPanel(QFrame):
         """
         btn = self._serial_connect_btn
         if connected:
-            btn.setText("断开")
+            btn.setText(tr("断开"))
             btn.setStyleSheet(_get_disconnect_button_style())
-            self._serial_status.setText("已连接")
+            self._serial_status.setText(tr("已连接"))
             self._serial_status.setStyleSheet(
                 "color: #2e7d32; font-size: 11px; background: transparent; padding: 2px 0;"
             )
         else:
-            btn.setText("连接")
+            btn.setText(tr("连接"))
             btn.setStyleSheet(get_visca_connect_button_style())
             self._serial_status.setText("")
             self._serial_status.setStyleSheet(
@@ -375,14 +375,14 @@ class VISCAPanel(QFrame):
         """
         btn = self._net_connect_btn
         if connected:
-            btn.setText("断开")
+            btn.setText(tr("断开"))
             btn.setStyleSheet(_get_disconnect_button_style())
-            self._net_status.setText("已连接")
+            self._net_status.setText(tr("已连接"))
             self._net_status.setStyleSheet(
                 "color: #2e7d32; font-size: 11px; background: transparent; padding: 2px 0;"
             )
         else:
-            btn.setText("连接")
+            btn.setText(tr("连接"))
             btn.setStyleSheet(get_visca_connect_button_style())
             self._net_status.setText("")
             self._net_status.setStyleSheet(
@@ -428,7 +428,7 @@ class VISCAPanel(QFrame):
     def _enter_connecting_state(self) -> None:
         """Set UI to 'connecting...' state."""
         self._serial_pending = True
-        self._serial_connect_btn.setText("连接中...")
+        self._serial_connect_btn.setText(tr("连接中..."))
         self._serial_connect_btn.setEnabled(False)
         self._set_serial_config_enabled(False)
 
@@ -472,7 +472,7 @@ class VISCAPanel(QFrame):
                 self._set_serial_connected(True)
             else:
                 self._show_serial_error("连接失败")
-                self._serial_connect_btn.setText("连接")
+                self._serial_connect_btn.setText(tr("连接"))
                 self._set_serial_config_enabled(True)
 
         def _on_serial_timeout() -> None:
@@ -481,7 +481,7 @@ class VISCAPanel(QFrame):
             self._serial_pending = False
             done[0] = True
             self._serial_connect_btn.setEnabled(True)
-            self._serial_connect_btn.setText("连接")
+            self._serial_connect_btn.setText(tr("连接"))
             self._show_serial_error("连接超时")
             self._set_serial_config_enabled(True)
 
@@ -542,7 +542,7 @@ class VISCAPanel(QFrame):
         if success:
             self._set_network_connected(True)
         else:
-            self._net_status.setText("连接失败")
+            self._net_status.setText(tr("连接失败"))
             self._net_status.setStyleSheet(
                 "color: #c62828; font-size: 11px; background: transparent; padding: 2px 0;"
             )
