@@ -294,7 +294,6 @@ class NDICaptureThread(QThread):
             self.state_changed.emit('connected')
             fail_count = 0
             first_frame = True
-            last_video_frames = 0
             while not self._stop_flag:
                 frame = video_frame_v2_t()
                 result = recv_capture_v2(
@@ -307,7 +306,6 @@ class NDICaptureThread(QThread):
                     fail_count = 0
                     capture_ts = time.perf_counter()
 
-                    # Convert BGRA frame to QImage
                     image = self._bgra_to_qimage(frame)
                     if image:
                         self.frame_ready.emit(image, capture_ts)
@@ -317,37 +315,26 @@ class NDICaptureThread(QThread):
                 elif result == FrameType.NONE:
                     if not first_frame:
                         fail_count += 1
-                    # Query performance stats when frames stop
-                    # to confirm no video data is arriving at all
+                    # 5s no frame: check via performance if source stopped sending
                     if fail_count == 5:
-                        perf = recv_performance_t()
-                        recv_get_performance(self._recv, perf)
-                        self._logger.warning(
-                            f"NDI: 5s no frame — perf: video={perf.video_frames}, "
-                            f"audio={perf.audio_frames}, dropped={perf.dropped_frames}, "
-                            f"pkt_lost={perf.total_lost_packets}"
-                        )
-                        if perf.video_frames == last_video_frames:
-                            self.error_occurred.emit(
-                                "NDI 信号中断 — 源设备可能为非授权/试用版本，已停止输出视频流"
+                        try:
+                            perf = recv_performance_t()
+                            recv_get_performance(self._recv, perf)
+                            self._logger.warning(
+                                f"NDI 5s no frame: video={perf.video_frames}, "
+                                f"dropped={perf.dropped_frames}, lost={perf.total_lost_packets}"
                             )
-                    # 30 seconds no frame: disconnect
+                        except Exception:
+                            pass
+                        self.error_occurred.emit(
+                            "NDI 信号中断 — 源设备可能为非授权/试用版本，已停止输出视频流"
+                        )
+                    # 30s no frame: disconnect
                     if fail_count >= 30:
                         self._logger.error("NDI: 30s no frame, disconnecting")
                         self.error_occurred.emit("NDI 信号已断开（30秒无数据）")
                         self.state_changed.emit('disconnected')
                         break
-
-                elif result == FrameType.ERROR:
-                    self._logger.warning("NDI capture error")
-                    self.error_occurred.emit("NDI 接收错误")
-                    break
-
-                # Track video frame count for performance comparison
-                if fail_count == 0:
-                    perf = recv_performance_t()
-                    recv_get_performance(self._recv, perf)
-                    last_video_frames = perf.video_frames
 
                 # METADATA and STATUS_CHANGE: continue silently
 
