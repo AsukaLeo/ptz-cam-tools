@@ -49,6 +49,7 @@ class VISCAPanel(QFrame):
         """
         super().__init__(parent)
         self.setObjectName("viscaPanel")
+        self.setMinimumHeight(220)
         self.setStyleSheet(get_visca_panel_style())
 
         self.on_status_update: Optional[Callable[[str], None]] = None
@@ -81,6 +82,7 @@ class VISCAPanel(QFrame):
         # Tab widget for Serial/Network
         visca_tab = QTabWidget()
         visca_tab.setStyleSheet(get_visca_tab_style())
+        visca_tab.setMinimumHeight(200)
 
         # Serial tab
         visca_tab.addTab(self._create_serial_tab(), "串口")
