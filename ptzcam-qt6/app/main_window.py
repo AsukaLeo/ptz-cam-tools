@@ -132,9 +132,8 @@ class MainWindow(QMainWindow):
         lang_layout.setContentsMargins(4, 2, 8, 4)
         self._lang_combo = QComboBox()
         self._lang_combo.addItems(["中文", "English"])
-        self._lang_combo.setStyleSheet(
-            "QComboBox { font-size: 10px; padding: 1px 2px; min-width: 60px; }"
-        )
+        self._lang_combo.setStyleSheet("QComboBox { font-size: 10px; padding: 1px 2px; }")
+        self._lang_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         lang_layout.addWidget(self._lang_combo)
         # Detect system language
         import locale
