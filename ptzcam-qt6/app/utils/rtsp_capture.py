@@ -170,5 +170,8 @@ class RTSPSource(QObject):
         Args:
             state: New playback state.
         """
-        state_name = {0: 'stopped', 1: 'playing', 2: 'paused'}.get(int(state), 'unknown')
+        try:
+            state_name = {0: 'stopped', 1: 'playing', 2: 'paused'}.get(int(state), 'unknown')
+        except TypeError:
+            state_name = str(state).split('.')[-1] if '.' in str(state) else str(state)
         self._logger.debug(f"RTSP state: {state_name}")
