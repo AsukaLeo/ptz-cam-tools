@@ -1,5 +1,7 @@
 """VISCA control panel widget."""
 
+import time
+import threading
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QGridLayout,
     QLabel, QPushButton, QComboBox, QLineEdit,
@@ -97,7 +99,9 @@ class VISCAPanel(QFrame):
             controller: ViscaController instance.
         """
         self._controller = controller
-        # Sync default checkbox state to controller (checkbox defaults to checked)
+        # Hook serial data monitor
+        self._controller.set_data_callback(self.log_serial_data)
+        # Sync default button state to controller
         if hasattr(self, '_tilt_reverse_btn'):
             controller.tilt_reverse = self._tilt_reverse_btn.isChecked()
 
@@ -205,7 +209,7 @@ class VISCAPanel(QFrame):
         grid.setContentsMargins(8, 8, 8, 8)
         grid.setSpacing(6)
 
-        # Row 0: Protocol + Address + Direction reverse
+        # Row 0: Protocol + Address + Direction reverse (compact)
         # Protocol
         self._net_proto = QComboBox()
         self._net_proto.addItems(NETWORK_PROTOCOLS)
@@ -219,16 +223,16 @@ class VISCAPanel(QFrame):
         grid.addWidget(QLabel("地址:"), 0, 2)
         grid.addWidget(self._net_addr, 0, 3)
 
-        # Direction reverse toggle (right of address)
-        self._tilt_reverse_btn = QPushButton("方向反转 \u2714")
+        # Direction reverse toggle (compact, right of address)
+        self._tilt_reverse_btn = QPushButton("反转 \u2714")
         self._tilt_reverse_btn.setCheckable(True)
         self._tilt_reverse_btn.setChecked(True)
         self._tilt_reverse_btn.setToolTip("部分 VISCA 协议上下方向相反时取消勾选")
         self._tilt_reverse_btn.setStyleSheet("""
             QPushButton {
-                font-size: 11px; background: #fff;
-                border: 1px solid #aaa; border-radius: 4px;
-                padding: 2px 8px; text-align: left; color: #333;
+                font-size: 10px; background: #fff;
+                border: 1px solid #aaa; border-radius: 3px;
+                padding: 2px 6px; text-align: left; color: #333;
             }
             QPushButton:checked {
                 border-color: #1976d2; color: #1976d2; font-weight: bold;
@@ -241,9 +245,9 @@ class VISCAPanel(QFrame):
             }
         """)
         self._tilt_reverse_btn.toggled.connect(self._on_tilt_reverse_changed)
-        grid.addWidget(self._tilt_reverse_btn, 0, 4, 1, 2)
+        grid.addWidget(self._tilt_reverse_btn, 0, 4)
 
-        # Row 1: Port + Connect button
+        # Row 1: Port + Connect button + Status
         # Port
         self._net_port = QLineEdit("5678")
         self._net_port.setFixedWidth(60)
@@ -254,25 +258,30 @@ class VISCAPanel(QFrame):
         self._net_connect_btn = QPushButton("连接")
         self._net_connect_btn.setStyleSheet(get_visca_connect_button_style())
         self._net_connect_btn.clicked.connect(self._toggle_network)
-        grid.addWidget(self._net_connect_btn, 1, 2, 1, 2, Qt.AlignCenter)
+        grid.addWidget(self._net_connect_btn, 1, 2, 1, 2, Qt.AlignLeft)
 
-        # Row 2: Network status + Serial data monitor
+        # Connection status (next to connect button)
         self._net_status = QLabel("")
         self._net_status.setStyleSheet(
             "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
         )
-        grid.addWidget(self._net_status, 2, 0, 1, 3)
+        grid.addWidget(self._net_status, 1, 4)
 
-        # Serial data readout
-        self._serial_monitor = QLabel("")
+        # Row 2: Serial data monitor (spans all columns)
+        from PySide6.QtWidgets import QTextEdit
+        self._serial_monitor = QTextEdit()
+        self._serial_monitor.setReadOnly(True)
+        self._serial_monitor.setFixedHeight(40)
         self._serial_monitor.setStyleSheet(
-            "color: #666; font-size: 10px; background: #f8f8f8;"
-            "border: 1px solid #ddd; border-radius: 4px;"
-            "padding: 4px 6px;"
+            "QTextEdit {"
+            "  color: #555; font-size: 10px; font-family: Consolas, monospace;"
+            "  background: #fafafa; border: 1px solid #ddd; border-radius: 4px;"
+            "  padding: 2px 4px;"
+            "}"
         )
-        self._serial_monitor.setWordWrap(True)
-        self._serial_monitor.setFixedHeight(36)
-        grid.addWidget(self._serial_monitor, 2, 3, 1, 3)
+        self._serial_monitor.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._serial_monitor.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        grid.addWidget(self._serial_monitor, 2, 0, 1, 5)
 
         grid.setColumnStretch(4, 1)
         return page
@@ -570,3 +579,25 @@ class VISCAPanel(QFrame):
     def set_connection_callback(self, callback: Callable[[bool], None]) -> None:
         """Set callback for VISCA connection state changes (True=connected)."""
         self._on_connection_changed = callback
+
+    def log_serial_data(self, direction: str, data: bytes) -> None:
+        """Append serial TX/RX data to the monitor.
+
+        Args:
+            direction: 'TX' or 'RX'.
+            data: Raw bytes sent or received.
+        """
+        hex_str = ' '.join(f'{b:02X}' for b in data)
+        ts = time.strftime('%H:%M:%S')
+        line = f"[{ts}] {direction}: {hex_str}"
+        self._serial_monitor.append(line)
+        # Auto-scroll to bottom
+        sb = self._serial_monitor.verticalScrollBar()
+        sb.setValue(sb.maximum())
+        # Keep only last 200 lines
+        if self._serial_monitor.document().blockCount() > 200:
+            cursor = self._serial_monitor.textCursor()
+            cursor.movePosition(cursor.Start)
+            cursor.select(cursor.BlockUnderCursor)
+            cursor.removeSelectedText()
+            cursor.deleteChar()

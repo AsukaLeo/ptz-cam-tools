@@ -94,7 +94,10 @@ class PTZPanel(QFrame):
         Args:
             connected: True if connected, False if disconnected.
         """
-        self.setEnabled(connected)
+        for child in self.findChildren(QPushButton):
+            child.setEnabled(connected)
+        for child in self.findChildren(QSlider):
+            child.setEnabled(connected)
 
     # ------------------------------------------------------------------
     # D-pad

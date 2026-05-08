@@ -49,8 +49,13 @@ class ViscaController:
         self._transport_type: str = ""
         self._logger = get_logger(__name__)
         self.on_status_update: Optional[Callable[[str], None]] = None
+        self._on_data: Optional[Callable[[str, bytes], None]] = None
         self.is_connected = False
         self.tilt_reverse: bool = False  # swap tilt up/down for some cameras
+
+    def set_data_callback(self, callback: Callable[[str, bytes], None]) -> None:
+        """Set callback for TX/RX data monitoring (direction: 'TX' or 'RX')."""
+        self._on_data = callback
 
     # ------------------------------------------------------------------
     # Connection management
@@ -297,6 +302,9 @@ class ViscaController:
             True if command was sent.
         """
         try:
+            # Notify data callback for TX monitoring
+            if self._on_data:
+                self._on_data('TX', cmd)
             # UDP is connectionless and may lose packets; retry to improve
             # reliability. TCP and Serial are reliable, send once.
             retries = self._STOP_RETRY_COUNT if self._transport_type == "udp" else 1
