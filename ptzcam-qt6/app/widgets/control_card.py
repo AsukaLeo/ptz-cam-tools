@@ -40,8 +40,6 @@ class ControlCard(QFrame):
             )
             self._layout.addWidget(title_label)
 
-        self.setMinimumWidth(500)
-
         self.setFixedHeight(120)
 
     def layout(self) -> QVBoxLayout:  # type: ignore[override]

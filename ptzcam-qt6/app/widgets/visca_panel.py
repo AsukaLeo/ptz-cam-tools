@@ -58,8 +58,6 @@ class VISCAPanel(QFrame):
         # Serial connect state
         self._serial_pending = False
         self._serial_timeout_timer: Optional[QTimer] = None
-        self._network_connected = False
-        self._serial_connected = False
 
         self._setup_ui()
 
@@ -344,8 +342,11 @@ class VISCAPanel(QFrame):
             w.setEnabled(enabled)
 
     def _set_serial_connected(self, connected: bool) -> None:
-        """Update serial tab UI for connected/disconnected state."""
-        self._serial_connected = connected
+        """Update serial tab UI for connected/disconnected state.
+
+        Args:
+            connected: True if connected, False if disconnected.
+        """
         btn = self._serial_connect_btn
         if connected:
             btn.setText(tr("断开"))
@@ -368,8 +369,11 @@ class VISCAPanel(QFrame):
             self._on_connection_changed(connected)
 
     def _set_network_connected(self, connected: bool) -> None:
-        """Update network tab UI for connected/disconnected state."""
-        self._network_connected = connected
+        """Update network tab UI for connected/disconnected state.
+
+        Args:
+            connected: True if connected, False if disconnected.
+        """
         btn = self._net_connect_btn
         if connected:
             btn.setText(tr("断开"))
@@ -403,7 +407,7 @@ class VISCAPanel(QFrame):
             self._notify_status("控制器未初始化")
             return
 
-        if self._serial_connected:
+        if self._serial_connect_btn.text() == "断开":
             self._disconnect()
             return
 
@@ -518,7 +522,7 @@ class VISCAPanel(QFrame):
             return
 
         # If currently connected, disconnect
-        if self._network_connected:
+        if self._net_connect_btn.text() == "断开":
             self._disconnect()
             return
 

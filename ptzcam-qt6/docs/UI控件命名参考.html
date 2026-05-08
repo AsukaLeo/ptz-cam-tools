@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="UTF-8"><title>UI Layout & Widget Names Reference</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:#1a1a2e;color:#ccc;padding:20px}
+h1{text-align:center;margin-bottom:20px;color:#fff}
+.window{width:1100px;margin:0 auto;background:#f5f5f5;border-radius:8px;overflow:hidden;box-shadow:0 0 30px rgba(0,0,0,.5)}
+.layout{position:relative;padding:6px}
+.label{position:absolute;background:#ff6b6b;color:#fff;font-size:9px;padding:1px 4px;border-radius:2px;z-index:10;white-space:nowrap;pointer-events:none;font-weight:bold;font-family:monospace}
+.tab-bar{display:flex;align-items:center;background:#e8e8e8;border:2px solid #ff6b6b;border-radius:4px 4px 0 0;min-height:44px;padding:4px 8px;position:relative}
+.tab{background:#ddd;padding:6px 16px;border-radius:4px 4px 0 0;margin-right:2px;font-size:12px;color:#555}
+.tab.active{background:#fff;color:#1976d2;font-weight:600}
+.spacer{flex:1}.lang{padding:4px 8px;background:#fff;border:1px solid #ccc;border-radius:3px;font-size:11px}
+
+.content{display:flex;flex-direction:column;padding:6px;gap:6px;min-height:400px}
+/* Top card row */
+.card-row{display:flex;gap:6px;position:relative;border:2px solid #4ecdc4}
+.control-card{flex:1;background:rgba(255,255,255,.95);border:2px solid #45b7d1;border-radius:4px;padding:8px;position:relative;min-height:80px}
+.help-card{width:180px;background:rgba(255,255,255,.7);border:2px solid #96ceb4;border-radius:4px;padding:8px;font-size:10px;color:#777}
+/* Main body row */
+.body-row{display:flex;gap:6px;flex:1;min-height:0}
+.preview-wrapper{flex:1;display:flex;border:2px solid #f39c12;border-radius:4px;background:rgba(0,0,0,.1);align-items:center;justify-content:center;position:relative;min-height:300px}
+.preview-text{color:rgba(255,255,255,.3);font-size:18px}
+.side-panels{width:310px;display:flex;flex-direction:column;gap:6px;flex-shrink:0;position:relative;border:2px solid #e74c3c}
+/* PTZ panel */
+.ptz{flex:4;background:rgba(255,255,255,.9);border:2px solid #9b59b6;border-radius:4px;padding:8px;position:relative;display:flex;flex-direction:column;gap:4px}
+.ptz-title{font-size:11px;font-weight:600;color:#555}
+.ptz-dpad{display:flex;flex-direction:column;align-items:center;gap:2px}
+.ptz-row{display:flex;gap:2px}
+.ptz-btn{width:28px;height:24px;border:1px solid #ccc;border-radius:4px;background:#f9f9f9;display:flex;align-items:center;justify-content:center;font-size:11px}
+.ptz-zoom{display:flex;gap:4px;justify-content:center}
+.ptz-zoom-btn{padding:2px 6px;border:1px solid #ccc;border-radius:3px;background:#f9f9f9;font-size:9px}
+.preset-bar{display:flex;gap:1px;align-items:center;flex-wrap:wrap;justify-content:center}
+.preset-num{width:22px;height:18px;border:1px solid #ddd;border-radius:2px;background:#f9f9f9;font-size:8px;text-align:center}
+.preset-act{font-size:8px;padding:1px 3px;border:1px solid #ddd;border-radius:2px;background:#f9f9f9}
+.slider-line{display:flex;align-items:center;gap:4px;font-size:9px;color:#666}
+.slider-bar{flex:1;height:3px;background:#ddd;border-radius:2px}
+/* VISCA panel */
+.visca{flex:3;background:rgba(255,255,255,.9);border:2px solid #3498db;border-radius:4px;padding:8px;position:relative;display:flex;flex-direction:column;gap:4px}
+.visca-title{font-size:11px;font-weight:600;color:#555}
+.visca-tabs{display:flex;border-bottom:1px solid #ccc;margin-bottom:4px}
+.visca-tab{padding:3px 10px;background:#f0f0f0;border:1px solid #ccc;border-radius:3px 3px 0 0;font-size:9px;margin-bottom:-1px}
+.visca-tab.active{background:#fff;border-bottom:1px solid #fff}
+.visca-grid{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:2px 6px;font-size:9px;align-items:center}
+.visca-label{color:#777;text-align:right}
+.visca-field{height:20px;border:1px solid #ccc;border-radius:2px;padding:0 4px;font-size:9px}
+.visca-btn{padding:2px 10px;border:none;border-radius:2px;background:#1976d2;color:#fff;font-size:9px}
+.reverse-btn{font-size:8px;padding:2px 4px;border:1px solid #1976d2;border-radius:2px;color:#1976d2;background:#fff}
+.visca-monitor{height:30px;background:#fdf6e3;border:1px solid #eee8d5;border-radius:2px;font-size:8px;font-family:monospace;color:#93a1a1;padding:2px;overflow:hidden}
+/* Status bar */
+.status-bar{display:flex;align-items:center;padding:2px 8px;background:#f0f0f0;border:2px solid #1abc9c;border-radius:0 0 4px 4px;font-size:11px;color:#888;gap:12px;min-height:22px}
+
+/* Legend */
+.legend{margin:20px auto;width:1100px;display:flex;flex-wrap:wrap;gap:12px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px}
+.leg-box{width:16px;height:16px;border-radius:2px;border:2px solid}
+.note{color:#aaa;font-size:14px;margin-left:4px}
+h2{color:#fff;margin:20px 0 10px;font-size:18px}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{border:1px solid #444;padding:4px 8px;text-align:left}
+th{background:#2c3e50;color:#fff}
+td code{background:#333;color:#0f0;padding:1px 4px;border-radius:2px;font-size:11px}
+</style></head><body>
+
+<h1>PTZ-Cam-Tools UI 控件命名参考</h1>
+
+<div class="window">
+  <div class="layout">
+    <!-- === TAB BAR === -->
+    <div class="label" style="top:2px;left:8px;background:#ff6b6b">mainTabWidget.tabBar</div>
+    <div class="label" style="top:2px;right:8px;background:#ff6b6b">langCombo</div>
+    <div class="tab-bar">
+      <div class="tab active">USB</div><div class="tab">RTSP</div><div class="tab">NDI</div><div class="tab">ONVIF</div>
+      <div class="spacer"></div><div class="lang">English</div>
+    </div>
+
+    <div class="content">
+      <!-- === CONTROL CARD ROW === -->
+      <div class="label" style="top:52px;left:8px;background:#4ecdc4">controlCard</div>
+      <div class="label" style="top:52px;right:190px;background:#96ceb4">helpCard</div>
+      <div class="card-row">
+        <div class="control-card">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:10px;color:#777">设备:</span>
+            <select style="width:180px;font-size:10px"><option>USB Camera</option></select>
+            <button style="padding:3px 12px;background:#1976d2;color:#fff;border:none;border-radius:3px;font-size:10px">播放</button>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
+            <span style="font-size:10px;color:#777">分辨率:</span>
+            <select style="width:100px;font-size:10px"><option>1920x1080</option></select>
+            <span style="font-size:10px;color:#777">格式:</span>
+            <select style="width:70px;font-size:10px"><option>MJPG</option></select>
+            <span style="font-size:10px;color:#777">帧率:</span>
+            <select style="width:60px;font-size:10px"><option>30fps</option></select>
+          </div>
+        </div>
+        <div class="help-card">
+          <strong style="font-size:9px">USB 使用说明</strong>
+          <div style="font-size:8px">1. 下拉选择摄像头</div>
+          <div style="font-size:8px">2. 点击播放开始预览</div>
+        </div>
+      </div>
+
+      <!-- === BODY ROW: PREVIEW + SIDE === -->
+      <div class="body-row">
+        <div class="label" style="top:160px;left:10px;background:#f39c12">previewWidget<br>(per tab)</div>
+        <div class="preview-wrapper">
+          <div class="preview-text">视频预览区</div>
+        </div>
+
+        <div class="side-panels">
+          <div class="label" style="top:160px;right:10px;background:#e74c3c">sidePanels</div>
+          <div class="label" style="top:185px;right:10px;background:#9b59b6">ptzPanel</div>
+
+          <!-- PTZ Panel -->
+          <div class="ptz">
+            <div class="ptz-title">PTZ 控制</div>
+            <div class="ptz-dpad">
+              <div class="ptz-row"><div class="ptz-btn">↖</div><div class="ptz-btn">▲</div><div class="ptz-btn">↗</div></div>
+              <div class="ptz-row"><div class="ptz-btn">◀</div><div class="ptz-btn" style="font-weight:bold">H</div><div class="ptz-btn">▶</div></div>
+              <div class="ptz-row"><div class="ptz-btn">↙</div><div class="ptz-btn">▼</div><div class="ptz-btn">↘</div></div>
+            </div>
+            <div class="ptz-zoom">
+              <div class="ptz-zoom-btn">变焦+</div><div class="ptz-zoom-btn">聚焦+</div>
+              <div class="ptz-zoom-btn">变焦-</div><div class="ptz-zoom-btn">聚焦-</div>
+            </div>
+            <div class="preset-bar">
+              <span style="font-size:8px">预置位</span>
+              <div class="preset-num">0</div><div class="preset-num">1</div><div class="preset-num">2</div>
+              <div class="preset-num">3</div><div class="preset-num">4</div><div class="preset-num">5</div>
+              <div class="preset-num">6</div><div class="preset-num">7</div><div class="preset-num">8</div><div class="preset-num">9</div>
+              <div class="preset-act">设置</div><div class="preset-act">清除</div><div class="preset-act">调用</div>
+            </div>
+            <div class="slider-line"><span>云台速度</span><div class="slider-bar"></div><span>12</span></div>
+            <div class="slider-line"><span>变焦速度</span><div class="slider-bar"></div><span>4</span></div>
+          </div>
+
+          <div class="label" style="bottom:8px;right:10px;background:#3498db">viscaPanel</div>
+          <!-- VISCA Panel -->
+          <div class="visca">
+            <div class="visca-title">VISCA 控制</div>
+            <div class="visca-tabs"><div class="visca-tab active">网络</div><div class="visca-tab">串口</div></div>
+            <div class="visca-grid">
+              <span class="visca-label">地址:</span><input class="visca-field" value="192.168.50.254" style="grid-column:span 3">
+              <span class="visca-label">协议:</span>
+              <select style="font-size:9px;height:20px"><option>TCP</option></select>
+              <span class="visca-label">端口:</span><input class="visca-field" value="5678" style="width:50px">
+              <span></span><div class="reverse-btn" style="grid-column:span 3">方向反转 ✔</div>
+              <span></span>
+              <button class="visca-btn">连接</button>
+              <span style="font-size:9px;color:#27ae60">已连接</span>
+            </div>
+            <div class="visca-monitor">[14:05:01] TX: 81 01 06 01 ... FF | RX: 90 50 FF</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="label" style="bottom:2px;left:8px;background:#1abc9c">statusBar</div>
+    <div class="status-bar">
+      <span>状态: Ready</span>
+      <span>1920×1080 | 30fps</span>
+      <span style="margin-left:auto">versionLabel</span>
+    </div>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="leg-item"><div class="leg-box" style="border-color:#ff6b6b"></div> tabBar / langCombo</div>
+  <div class="leg-item"><div class="leg-box" style="border-color:#4ecdc4"></div> controlCard</div>
+  <div class="leg-item"><div class="leg-box" style="border-color:#96ceb4"></div> helpCard</div>
+  <div class="leg-item"><div class="leg-box" style="border-color:#f39c12"></div> previewWidget</div>
+  <div class="leg-item"><div class="leg-box" style="border-color:#9b59b6"></div> ptzPanel</div>
+  <div class="leg-item"><div class="leg-box" style="border-color:#3498db"></div> viscaPanel</div>
+  <div class="leg-item"><div class="leg-box" style="border-color:#1abc9c"></div> statusBar</div>
+</div>
+
+<br>
+<h2>控件命名对照表</h2>
+<table>
+<tr><th>名称</th><th>代码引用</th><th>位置</th><th>说明</th></tr>
+<tr><td><code>mainTabWidget</code></td><td><code>self.tab_widget</code></td><td>顶部</td><td>USB/RTSP/NDI/ONVIF 四个 Tab</td></tr>
+<tr><td><code>langCombo</code></td><td><code>self._lang_combo</code></td><td>Tab 栏右侧</td><td>中文/English 语言切换</td></tr>
+<tr><td><code>controlCard</code></td><td>各tab的 <code>ControlCard()</code></td><td>Tab 下方</td><td>设备/URL 控制区</td></tr>
+<tr><td><code>helpCard</code></td><td>各tab的 <code>HelpCard()</code></td><td>controlCard 右侧</td><td>使用说明</td></tr>
+<tr><td><code>previewWidget</code></td><td><code>PreviewWidget()</code></td><td>左侧大面积</td><td>视频预览区 16:9</td></tr>
+<tr><td><code>ptzPanel</code></td><td><code>self._ptz_panel</code></td><td>右侧上部 4/7</td><td>方向·变焦·预置位·滑块</td></tr>
+<tr><td><code>viscaPanel</code></td><td><code>self._visca_panel</code></td><td>右侧下部 3/7</td><td>串口/网络·方向反转·监控</td></tr>
+<tr><td><code>statusBar</code></td><td><code>self.statusBar()</code></td><td>底部</td><td>状态/VInfo/版本</td></tr>
+<tr><td><code>statusLabel</code></td><td><code>self.status_label</code></td><td>状态栏左侧</td><td>状态文本</td></tr>
+<tr><td><code>videoInfoLabel</code></td><td><code>self.video_info_label</code></td><td>状态栏中部</td><td>分辨率·fps·格式</td></tr>
+<tr><td><code>versionLabel</code></td><td><code>self.version_label</code></td><td>状态栏右侧</td><td>版本号</td></tr>
+</table>
+
+<h2>子控件（PTZ Panel 内）</h2>
+<table>
+<tr><th>描述</th><th>代码引用</th></tr>
+<tr><td>8方向按钮 (↖▲↗◀▶↙▼↘)</td><td><code>QPushButton</code> 固定尺寸 32x28</td></tr>
+<tr><td>Home 中心按钮</td><td><code>QPushButton("Home")</code></td></tr>
+<tr><td>变焦+ / 聚焦+</td><td><code>self._create_press_btn("变焦+", ...)</code></td></tr>
+<tr><td>变焦- / 聚焦-</td><td><code>self._create_press_btn("变焦-", ...)</code></td></tr>
+<tr><td>预置位 0-9</td><td><code>self._create_preset_num_btn(str(i))</code></td></tr>
+<tr><td>设置/清除/调用</td><td><code>self._create_preset_action_btn("设置")</code></td></tr>
+<tr><td>云台速度滑块</td><td><code>self._ptz_slider</code></td></tr>
+<tr><td>变焦速度滑块</td><td><code>self._zoom_slider</code></td></tr>
+</table>
+
+<h2>子控件（VISCA Panel 内）</h2>
+<table>
+<tr><th>描述</th><th>代码引用</th></tr>
+<tr><td>网络/串口 Tab</td><td>内嵌 <code>QTabWidget</code></td></tr>
+<tr><td>地址输入</td><td><code>self._net_addr</code></td></tr>
+<tr><td>协议选择</td><td><code>self._net_proto</code></td></tr>
+<tr><td>端口输入</td><td><code>self._net_port</code></td></tr>
+<tr><td>方向反转按钮</td><td><code>self._tilt_reverse_btn</code></td></tr>
+<tr><td>连接/断开按钮(网络)</td><td><code>self._net_connect_btn</code></td></tr>
+<tr><td>连接/断开按钮(串口)</td><td><code>self._serial_connect_btn</code></td></tr>
+<tr><td>串口配置 (端口/波特率/数据/校验/停止)</td><td><code>self._serial_port/baud/data/parity/stop</code></td></tr>
+<tr><td>TX/RX 监控区</td><td><code>self._serial_monitor</code></td></tr>
+<tr><td>状态标签</td><td><code>self._net_status</code></td></tr>
+</table>
+
+</body></html>
