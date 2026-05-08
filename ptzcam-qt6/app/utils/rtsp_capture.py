@@ -48,6 +48,12 @@ class RTSPSource(QObject):
         self._url: str = ""
         self._playing = False
 
+        # Frame throttling: store latest frame, deliver at ~30fps via timer
+        self._latest_frame: Optional[QVideoFrame] = None
+        self._frame_timer = QTimer()
+        self._frame_timer.setInterval(33)  # ~30fps
+        self._frame_timer.timeout.connect(self._deliver_frame)
+
     def connect_to(self, url: str) -> bool:
         """Connect to RTSP stream.
 
@@ -79,11 +85,14 @@ class RTSPSource(QObject):
             return False
 
         self._player.play()
+        self._frame_timer.start()
         self._logger.info(f"RTSP connecting: {url}")
         return True
 
     def disconnect(self) -> None:
         """Stop RTSP stream."""
+        self._frame_timer.stop()
+        self._latest_frame = None
         if self._player:
             self._player.stop()
         if self._sink:
@@ -110,25 +119,38 @@ class RTSPSource(QObject):
         return self._playing and self._player is not None
 
     def _on_frame_changed(self, frame: QVideoFrame) -> None:
-        """Handle new RTSP frame.
+        """Store latest frame (no conversion here — avoid blocking main thread).
 
         Args:
             frame: New video frame.
         """
         if not frame.isValid():
             return
+        self._latest_frame = QVideoFrame(frame)  # Copy for later use
 
+    def _deliver_frame(self) -> None:
+        """Timer callback: convert latest frame and deliver."""
+        if self._latest_frame is None:
+            return
+        if not self._latest_frame.isValid():
+            return
+
+        frame = self._latest_frame
+        self._latest_frame = None
         capture_ts = time.perf_counter()
+
         try:
             image = frame.toImage()
         except Exception:
             return
 
-        if not image.isNull():
-            if not self._playing:
-                self._playing = True
-                self.state_changed.emit('connected')
-            self.frame_ready.emit(image, capture_ts)
+        if image.isNull():
+            return
+
+        if not self._playing:
+            self._playing = True
+            self.state_changed.emit('connected')
+        self.frame_ready.emit(image, capture_ts)
 
     def _on_player_error(self, error: 'QMediaPlayer.Error', error_string: str) -> None:
         """Handle player error.
