@@ -153,48 +153,45 @@ class VISCAPanel(QFrame):
         grid.setContentsMargins(8, 8, 8, 8)
         grid.setSpacing(6)
 
-        # Port combo
+        # Row 0: Port | Baud
         self._serial_port = QComboBox()
         self._populate_serial_ports()
         grid.addWidget(QLabel("端口:"), 0, 0)
         grid.addWidget(self._serial_port, 0, 1)
 
-        # Baud rate
         self._serial_baud = QComboBox()
         self._serial_baud.addItems(BAUD_RATES)
         grid.addWidget(QLabel("波特率:"), 0, 2)
         grid.addWidget(self._serial_baud, 0, 3)
 
-        # Data bits
+        # Row 1: Data | Parity | Stop
         self._serial_data = QComboBox()
         self._serial_data.addItems(DATA_BITS)
-        grid.addWidget(QLabel("数据位:"), 0, 4)
-        grid.addWidget(self._serial_data, 0, 5)
+        grid.addWidget(QLabel("数据位:"), 1, 0)
+        grid.addWidget(self._serial_data, 1, 1)
 
-        # Parity
         self._serial_parity = QComboBox()
         self._serial_parity.addItems(PARITY_BITS)
-        grid.addWidget(QLabel("校验位:"), 1, 0)
-        grid.addWidget(self._serial_parity, 1, 1)
+        grid.addWidget(QLabel("校验位:"), 1, 2)
+        grid.addWidget(self._serial_parity, 1, 3)
 
-        # Stop bits
+        # Row 2: Stop bits | Connect button
         self._serial_stop = QComboBox()
         self._serial_stop.addItems(STOP_BITS)
-        grid.addWidget(QLabel("停止位:"), 1, 2)
-        grid.addWidget(self._serial_stop, 1, 3)
+        grid.addWidget(QLabel("停止位:"), 2, 0)
+        grid.addWidget(self._serial_stop, 2, 1)
 
-        # Connect/Disconnect button
         self._serial_connect_btn = QPushButton("连接")
         self._serial_connect_btn.setStyleSheet(get_visca_connect_button_style())
         self._serial_connect_btn.clicked.connect(self._toggle_serial)
-        grid.addWidget(self._serial_connect_btn, 1, 4, 1, 2, Qt.AlignCenter)
+        grid.addWidget(self._serial_connect_btn, 2, 2, 1, 2, Qt.AlignCenter)
 
-        # Serial status label
+        # Row 3: Status
         self._serial_status = QLabel("")
         self._serial_status.setStyleSheet(
             "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
         )
-        grid.addWidget(self._serial_status, 2, 0, 1, 6)
+        grid.addWidget(self._serial_status, 3, 0, 1, 4)
 
         # Serial data monitor (shared with network tab)
         from PySide6.QtWidgets import QTextEdit
@@ -210,10 +207,9 @@ class VISCAPanel(QFrame):
         )
         self._serial_monitor_serial.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._serial_monitor_serial.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        grid.addWidget(self._serial_monitor_serial, 3, 0, 1, 6)
-
-        grid.setColumnStretch(6, 1)
-        return page
+        self._serial_monitor_serial.setMinimumHeight(40)
+        grid.addWidget(self._serial_monitor_serial, 4, 0, 1, 4)
+        grid.setRowStretch(4, 1)
 
     def _create_network_tab(self) -> QWidget:
         """Create the network configuration tab.
@@ -226,27 +222,27 @@ class VISCAPanel(QFrame):
         grid.setContentsMargins(8, 8, 8, 8)
         grid.setSpacing(6)
 
-        # Row 0: Protocol + Address + Direction reverse (compact)
-        # Protocol
+        # Row 0: Address
+        grid.addWidget(QLabel("地址:"), 0, 0)
+        self._net_addr = QLineEdit("192.168.50.254")
+        grid.addWidget(self._net_addr, 0, 1, 1, 3)
+
+        # Row 1: Protocol | Port
+        grid.addWidget(QLabel("协议:"), 1, 0)
         self._net_proto = QComboBox()
         self._net_proto.addItems(NETWORK_PROTOCOLS)
         self._net_proto.currentIndexChanged.connect(self._on_protocol_changed)
-        grid.addWidget(QLabel("协议:"), 0, 0)
-        grid.addWidget(self._net_proto, 0, 1)
+        grid.addWidget(self._net_proto, 1, 1)
 
-        # Address
-        self._net_addr = QLineEdit("192.168.50.254")
-        self._net_addr.setFixedWidth(120)
-        grid.addWidget(QLabel("地址:"), 0, 2)
-        grid.addWidget(self._net_addr, 0, 3)
+        grid.addWidget(QLabel("端口:"), 1, 2)
+        self._net_port = QLineEdit("5678")
+        self._net_port.setFixedWidth(60)
+        grid.addWidget(self._net_port, 1, 3)
 
-        # Direction reverse toggle (compact, right of address)
+        # Row 2: Direction reverse
         self._tilt_reverse_btn = QPushButton("方向反转 \u2714")
         self._tilt_reverse_btn.setCheckable(True)
         self._tilt_reverse_btn.setChecked(True)
-        self._tilt_reverse_btn.setSizePolicy(
-            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
-        )
         self._tilt_reverse_btn.setToolTip("部分 VISCA 协议上下方向相反时取消勾选")
         self._tilt_reverse_btn.setStyleSheet("""
             QPushButton {
@@ -257,41 +253,29 @@ class VISCAPanel(QFrame):
             QPushButton:checked {
                 border-color: #1976d2; color: #1976d2; font-weight: bold;
             }
-            QPushButton:!checked {
-                color: #888;
-            }
-            QPushButton:hover {
-                background: #f5f5f5;
-            }
+            QPushButton:!checked { color: #888; }
+            QPushButton:hover { background: #f5f5f5; }
         """)
         self._tilt_reverse_btn.toggled.connect(self._on_tilt_reverse_changed)
-        grid.addWidget(self._tilt_reverse_btn, 0, 4)
+        grid.addWidget(self._tilt_reverse_btn, 2, 0, 1, 2)
 
-        # Row 1: Port + Connect button + Status
-        # Port
-        self._net_port = QLineEdit("5678")
-        self._net_port.setFixedWidth(60)
-        grid.addWidget(QLabel("端口:"), 1, 0)
-        grid.addWidget(self._net_port, 1, 1)
-
-        # Connect/Disconnect button
+        # Row 3: Connect button + Status
         self._net_connect_btn = QPushButton("连接")
         self._net_connect_btn.setStyleSheet(get_visca_connect_button_style())
         self._net_connect_btn.clicked.connect(self._toggle_network)
-        grid.addWidget(self._net_connect_btn, 1, 2, 1, 2, Qt.AlignLeft)
+        grid.addWidget(self._net_connect_btn, 3, 0)
 
-        # Connection status (next to connect button)
         self._net_status = QLabel("")
         self._net_status.setStyleSheet(
             "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
         )
-        grid.addWidget(self._net_status, 1, 4)
+        grid.addWidget(self._net_status, 3, 1, 1, 3)
 
-        # Row 2: Serial data monitor (spans all columns)
+        # Row 4: Serial monitor (fills remaining height)
         from PySide6.QtWidgets import QTextEdit
         self._serial_monitor = QTextEdit()
         self._serial_monitor.setReadOnly(True)
-        self._serial_monitor.setFixedHeight(60)
+        self._serial_monitor.setMinimumHeight(40)
         self._serial_monitor.setStyleSheet(
             "QTextEdit {"
             "  color: #555; font-size: 10px; font-family: Consolas, monospace;"
@@ -301,7 +285,8 @@ class VISCAPanel(QFrame):
         )
         self._serial_monitor.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._serial_monitor.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        grid.addWidget(self._serial_monitor, 2, 0, 1, 5)
+        grid.addWidget(self._serial_monitor, 4, 0, 1, 4)
+        grid.setRowStretch(4, 1)
 
         grid.setColumnStretch(4, 1)
         return page

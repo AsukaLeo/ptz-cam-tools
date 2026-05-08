@@ -72,16 +72,16 @@ class PTZPanel(QFrame):
         layout.addWidget(self._title_label)
 
         # Top row: dpad + zoom/focus + preset controls
-        controls_layout = QHBoxLayout()
-        controls_layout.setSpacing(16)
-        controls_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-
-        controls_layout.addLayout(self._create_dpad())
-        controls_layout.addLayout(self._create_zoom_focus_controls())
-        controls_layout.addLayout(self._create_preset_controls())
-
-        controls_layout.addStretch()
-        layout.addLayout(controls_layout)
+        # Stack D-pad, zoom, presets vertically (fit narrow side panel)
+        vstack = QVBoxLayout()
+        vstack.setSpacing(6)
+        dpad = self._create_dpad()
+        dpad.setAlignment(Qt.AlignCenter)
+        vstack.addLayout(dpad)
+        vstack.addLayout(self._create_zoom_focus_controls())
+        vstack.addLayout(self._create_preset_controls())
+        vstack.addStretch()
+        layout.addLayout(vstack)
 
         # Speed sliders
         layout.addLayout(self._create_speed_sliders())
