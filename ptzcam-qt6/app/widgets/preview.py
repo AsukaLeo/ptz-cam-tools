@@ -35,6 +35,7 @@ class PreviewWidget(QFrame):
         super().__init__(parent)
         self.setObjectName("previewContainer")
         self.setMinimumHeight(200)
+        self.setMinimumWidth(400)
         self.setStyleSheet(get_preview_container_style())
         
         # Container layout

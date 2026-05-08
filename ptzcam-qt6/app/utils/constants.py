@@ -43,8 +43,8 @@ TAB_SETTINGS: str = "设置"
 
 # Video preview
 PREVIEW_PLACEHOLDER_TEXT: str = "视频预览区"
-PREVIEW_MIN_WIDTH: int = 160
-PREVIEW_MIN_HEIGHT: int = 90
+PREVIEW_MIN_WIDTH: int = 480
+PREVIEW_MIN_HEIGHT: int = 270
 
 # ComboBox options
 USB_DEVICES: list[str] = ["USB Camera (1)", "USB Camera (2)"]
