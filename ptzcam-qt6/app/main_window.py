@@ -82,8 +82,12 @@ class MainWindow(QMainWindow):
         # Status bar
         self._create_status_bar()
 
-        # Apply initial language (setCurrentIndex before connect → signal missed)
+        # Apply initial language
         self._on_language_changed(self._lang_combo.currentIndex())
+
+        # Debug overlay (press F12 to toggle widget labels)
+        from app.utils.debug_overlay import DebugOverlay
+        self._debug_overlay = DebugOverlay(self)
     
     def _create_tab_widget(self, parent_layout, stretch: int = 1) -> None:
         """Create and configure the tab widget.
@@ -93,6 +97,7 @@ class MainWindow(QMainWindow):
             stretch: Stretch factor (0=no stretch, 1=fill available space).
         """
         self.tab_widget = QTabWidget()
+        self.tab_widget.setObjectName("tabWidget")
         
         # Create tab pages
         self._usb_tab = USBTab()
@@ -141,6 +146,7 @@ class MainWindow(QMainWindow):
         lang_layout = QHBoxLayout(lang_wrapper)
         lang_layout.setContentsMargins(4, 2, 8, 4)
         self._lang_combo = QComboBox()
+        self._lang_combo.setObjectName("langCombo")
         self._lang_combo.addItems(["中文", "English"])
         self._lang_combo.setStyleSheet("QComboBox { font-size: 10px; padding: 1px 2px; }")
         self._lang_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
@@ -204,7 +210,9 @@ class MainWindow(QMainWindow):
 
         # Create panels
         self._ptz_panel = PTZPanel()
+        self._ptz_panel.setObjectName("ptzPanel")
         self._visca_panel = VISCAPanel()
+        self._visca_panel.setObjectName("viscaPanel")
 
         # Inject controller
         self._ptz_panel.set_controller(self._visca_controller)
@@ -225,6 +233,7 @@ class MainWindow(QMainWindow):
 
         # Wrap in a fixed-width container
         side_container = QWidget()
+        side_container.setObjectName("sidePanels")
         side_container.setFixedWidth(340)
         side_container.setLayout(side_layout)
 
