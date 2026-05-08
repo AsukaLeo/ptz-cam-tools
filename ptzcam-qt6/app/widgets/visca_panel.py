@@ -81,15 +81,19 @@ class VISCAPanel(QFrame):
 
         # Tab widget for Serial/Network
         visca_tab = QTabWidget()
-        visca_tab.setStyleSheet(get_visca_tab_style())
+        # visca_tab.setStyleSheet(get_visca_tab_style())  # DEBUG: test without custom style
         visca_tab.setMinimumHeight(200)
 
         # Serial tab
         serial_page = self._create_serial_tab()
-        visca_tab.addTab(serial_page, "串口")
+        idx0 = visca_tab.addTab(serial_page, "串口")
 
         # Network tab
-        visca_tab.addTab(self._create_network_tab(), "网络")
+        network_page = self._create_network_tab()
+        idx1 = visca_tab.addTab(network_page, "网络")
+
+        visca_tab.setTabVisible(idx0, True)
+        visca_tab.setTabVisible(idx1, True)
 
         # Default to serial tab (more visible for debugging)
         visca_tab.setCurrentIndex(0)
