@@ -17,6 +17,36 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.31.508 — 多语言支持 + UI完善 + 功能增强
+
+**Tag**: `V0.31.508` · **Commit**: `5cb82ea` · **日期**: 2026-05-08
+
+### 语言国际化
+- **中/English 实时切换**：Tab 栏右侧语言下拉，100+ 词条全覆盖
+- **翻译对照表**：`docs/翻译对照表.md` 完整记录，支持扩展
+- **自动刷新**：按钮状态变化时保持翻译一致性
+
+### 功能增强
+- **RTSP URL 历史**：内置 2 条产品 RTSP 地址，最多 5 条输入历史
+- **NDI 授权断流检测**：基于 NDI SDK 性能统计 API，5 秒无帧 + 视频帧计数确认
+- **NDI 默认选中首设备**：发现设备后自动选中
+- **串口 TX/RX 数据监控**：QTextEdit 滚动显示 HEX 数据流
+- **VISCA 默认网络 Tab**：方向反转移至地址右侧
+
+### UI 完善
+- **各 Tab 使用说明卡**：控制面板右侧半透明卡片，中英双语
+- **PTZ 连接态禁用**：VISCA 未连接时全部控件灰显
+- **RTSP 帧率优化**：QMediaPlayer 限帧投递避免主线程阻塞
+- **QCheckBox→QPushButton toggle**：彻底解决深色主题勾选框渲染
+
+### 技术债务
+- 移除 Settings Tab，改为语言切换 ComboBox
+- 移除 `thirdparty/FFmpeg` DLL（Qt 内置）
+- NDI `recv_get_performance` SDK 绑定
+- 所有动态 `setText` 改用 `tr()`
+
+---
+
 ## V 0.28.507 — Slim Edition：体积优化（233MB→98MB，-58%）
 
 **Tag**: `V0.28.507` · **Commit**: `b2f6091` · **日期**: 2026-05-07
