@@ -4,5 +4,6 @@ from .preview import PreviewWidget
 from .ptz_panel import PTZPanel
 from .visca_panel import VISCAPanel
 from .control_card import ControlCard
+from .help_card import HelpCard
 
-__all__ = ["PreviewWidget", "PTZPanel", "VISCAPanel", "ControlCard"]
+__all__ = ["PreviewWidget", "PTZPanel", "VISCAPanel", "ControlCard", "HelpCard"]

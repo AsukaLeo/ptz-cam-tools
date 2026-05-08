@@ -20,7 +20,7 @@ from app.utils.onvif_device import (
 )
 from app.utils.rtsp_capture import RTSPSource
 from app.utils.logger import get_logger
-from app.widgets import ControlCard
+from app.widgets import ControlCard, HelpCard
 
 
 class ONVIFTab(QWidget):
@@ -85,11 +85,25 @@ class ONVIFTab(QWidget):
         layout.setContentsMargins(16, 12, 16, 8)
         layout.setSpacing(8)
 
+        top_row = QHBoxLayout()
+        top_row.setSpacing(8)
         card = self._create_control_card()
-        layout.addWidget(card)
+        top_row.addWidget(card, 1)
+        top_row.addWidget(self._create_help_card())
+        layout.addLayout(top_row)
 
         self._preview_placeholder = QWidget()
         layout.addWidget(self._preview_placeholder, 1)
+
+    def _create_help_card(self) -> QWidget:
+        """Create help card with usage instructions."""
+        return HelpCard("ONVIF 使用说明", [
+            "1. 点击「发现」搜索网络设备",
+            "2. 下拉选择目标 ONVIF 设备",
+            "3. 可输入自定义 IP 和凭据",
+            "4. 点击「连接」自动探测配置",
+            "5. 凭据错误将自动尝试常见默认值",
+        ])
 
     def _create_control_card(self) -> QWidget:
         """Create the control card with ONVIF controls.

@@ -17,7 +17,7 @@ from app.styles.theme import (
 from app.utils.network_utils import get_nic_choices
 from app.utils.ndi_capture import NDISourceFinder, NDICapture, NDISource
 from app.utils.logger import get_logger
-from app.widgets import ControlCard
+from app.widgets import ControlCard, HelpCard
 
 
 class NDITab(QWidget):
@@ -75,11 +75,25 @@ class NDITab(QWidget):
         layout.setContentsMargins(16, 12, 16, 8)
         layout.setSpacing(8)
 
+        top_row = QHBoxLayout()
+        top_row.setSpacing(8)
         card = self._create_control_card()
-        layout.addWidget(card)
+        top_row.addWidget(card, 1)
+        top_row.addWidget(self._create_help_card())
+        layout.addLayout(top_row)
 
         self._preview_placeholder = QWidget()
         layout.addWidget(self._preview_placeholder, 1)
+
+    def _create_help_card(self) -> QWidget:
+        """Create help card with usage instructions."""
+        return HelpCard("NDI 使用说明", [
+            "1. 点击「刷新」搜索网络 NDI 源",
+            "2. 下拉选择目标 NDI 设备",
+            "3. 点击「连接」开始接收视频",
+            "4. 非授权设备 15 分钟后可能断流",
+            "5. 5 秒无帧将提示可能为试用版",
+        ])
 
     def _create_control_card(self) -> QWidget:
         """Create the control card with NDI controls.

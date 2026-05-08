@@ -16,7 +16,7 @@ from app.styles.theme import (
 from app.utils.network_utils import get_nic_choices
 from app.utils.rtsp_capture import RTSPSource
 from app.utils.logger import get_logger
-from app.widgets import ControlCard
+from app.widgets import ControlCard, HelpCard
 
 
 class RTSPTab(QWidget):
@@ -76,13 +76,27 @@ class RTSPTab(QWidget):
         layout.setContentsMargins(16, 12, 16, 8)
         layout.setSpacing(8)
 
-        # Connection control card
+        # Connection control card + Help card
+        top_row = QHBoxLayout()
+        top_row.setSpacing(8)
         card = self._create_control_card()
-        layout.addWidget(card)
+        top_row.addWidget(card, 1)
+        top_row.addWidget(self._create_help_card())
+        layout.addLayout(top_row)
 
         # Preview area placeholder (replaced by set_preview_widget)
         self._preview_placeholder = QWidget()
         layout.addWidget(self._preview_placeholder, 1)
+
+    def _create_help_card(self) -> QWidget:
+        """Create help card with usage instructions."""
+        return HelpCard("RTSP 使用说明", [
+            "1. 输入 RTSP 流媒体地址",
+            "2. 如有认证需填写用户名和密码",
+            "3. 选择传输协议（UDP/TCP）",
+            "4. 点击「连接」开始拉流",
+            "5. 点击「断开」停止播放",
+        ])
 
     def _create_control_card(self) -> QWidget:
         """Create the control card with connection controls.

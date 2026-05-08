@@ -17,7 +17,7 @@ from app.utils.logger import get_logger
 from app.styles.theme import (
     get_standard_button_style, get_primary_button_style, get_danger_button_style,
 )
-from app.widgets import ControlCard
+from app.widgets import ControlCard, HelpCard
 
 import psutil
 
@@ -78,14 +78,28 @@ class USBTab(QWidget):
         layout.setContentsMargins(16, 12, 16, 8)
         layout.setSpacing(8)
         
-        # Control card
+        # Control card + Help card (side by side)
+        top_row = QHBoxLayout()
+        top_row.setSpacing(8)
         card = self._create_control_card()
-        layout.addWidget(card)
+        top_row.addWidget(card, 1)
+        top_row.addWidget(self._create_help_card())
+        layout.addLayout(top_row)
         
         # Preview area (added externally)
         self._preview_placeholder = QWidget()
         layout.addWidget(self._preview_placeholder, 1)
     
+    def _create_help_card(self) -> QWidget:
+        """Create help card with usage instructions."""
+        return HelpCard("USB 使用说明", [
+            "1. 下拉选择 USB 摄像头设备",
+            "2. 选择分辨率、格式和帧率",
+            "3. 点击「播放」开始预览",
+            "4. 点击「停止」结束预览",
+            "5. 点「刷新」重新检测设备",
+        ])
+
     def _create_control_card(self) -> QWidget:
         """Create the control card with device and parameter controls.
 
