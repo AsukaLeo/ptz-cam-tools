@@ -67,11 +67,17 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(16, 6, 16, 6)
         main_layout.setSpacing(6)
         
-        # Tab widget
-        self._create_tab_widget(main_layout)
-        
-        # Control panels (PTZ + VISCA)
-        self._create_control_panels(main_layout)
+        # Row: Tab widget (left, stretch) | PTZ + VISCA (right, fixed)
+        body_row = QHBoxLayout()
+        body_row.setSpacing(8)
+
+        # Left: Tab widget (contains control cards + previews)
+        self._create_tab_widget(body_row, stretch=1)
+
+        # Right: Control panels (PTZ top, VISCA bottom)
+        self._create_control_panels(body_row)
+
+        main_layout.addLayout(body_row, 1)
         
         # Status bar
         self._create_status_bar()
@@ -79,11 +85,12 @@ class MainWindow(QMainWindow):
         # Apply initial language (setCurrentIndex before connect → signal missed)
         self._on_language_changed(self._lang_combo.currentIndex())
     
-    def _create_tab_widget(self, parent_layout: QVBoxLayout) -> None:
+    def _create_tab_widget(self, parent_layout, stretch: int = 1) -> None:
         """Create and configure the tab widget.
         
         Args:
             parent_layout: Layout to add the tab widget to.
+            stretch: Stretch factor (0=no stretch, 1=fill available space).
         """
         self.tab_widget = QTabWidget()
         
@@ -148,7 +155,7 @@ class MainWindow(QMainWindow):
         # Connect tab change signal
         self.tab_widget.currentChanged.connect(self._on_tab_changed)
         
-        parent_layout.addWidget(self.tab_widget, 1)
+        parent_layout.addWidget(self.tab_widget, stretch)
     
     def _create_preview_for_tab(self, tab: QWidget) -> PreviewWidget:
         """Create and attach a preview widget to a tab.
@@ -183,13 +190,13 @@ class MainWindow(QMainWindow):
             if tab and hasattr(tab, 'on_visca_address'):
                 tab.on_visca_address = make_callback(name)
 
-    def _create_control_panels(self, parent_layout: QVBoxLayout) -> None:
-        """Create PTZ and VISCA control panels.
+    def _create_control_panels(self, parent_layout: QHBoxLayout) -> None:
+        """Create PTZ and VISCA control panels, stacked vertically on the right.
 
         Also creates the ViscaController and injects it into both panels.
 
         Args:
-            parent_layout: Layout to add panels to.
+            parent_layout: Horizontal layout to add side panels to.
         """
         # Create VISCA controller
         self._visca_controller = ViscaController()
@@ -206,17 +213,22 @@ class MainWindow(QMainWindow):
         # Sync PTZ panel enabled state with VISCA connection
         self._visca_panel.set_connection_callback(self._ptz_panel.set_connected)
 
-        # Set up status callbacks (fallback for non-controller messages)
+        # Set up status callbacks
         self._ptz_panel.set_status_callback(self.update_status)
         self._visca_panel.set_status_callback(self.update_status)
 
-        # Layout panels side by side
-        controls_layout = QHBoxLayout()
-        controls_layout.setSpacing(12)
-        controls_layout.addWidget(self._ptz_panel, 1)
-        controls_layout.addWidget(self._visca_panel, 1)
+        # Layout panels vertically on the right side
+        side_layout = QVBoxLayout()
+        side_layout.setSpacing(6)
+        side_layout.addWidget(self._ptz_panel, 4)
+        side_layout.addWidget(self._visca_panel, 3)
 
-        parent_layout.addLayout(controls_layout)
+        # Wrap in a fixed-width container
+        side_container = QWidget()
+        side_container.setFixedWidth(340)
+        side_container.setLayout(side_layout)
+
+        parent_layout.addWidget(side_container)
     
     def _create_status_bar(self) -> None:
         """Create and configure the status bar."""

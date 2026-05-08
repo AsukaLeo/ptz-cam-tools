@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>PTZ-Cam-Tools Layout V2 — 原型</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Microsoft YaHei',sans-serif; background:#1a1a2e; color:#333; display:flex; justify-content:center; padding:20px; }
+.window { width:1100px; height:700px; background:#f0f0f0; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 0 30px rgba(0,0,0,.5); }
+
+/* Tab bar */
+.tab-bar { display:flex; align-items:center; background:#e8e8e8; border-bottom:1px solid #ccc; padding:4px 8px 0; }
+.tab { padding:8px 20px; background:rgba(232,232,232,.7); border:1px solid #ccc; border-bottom:none; border-radius:6px 6px 0 0; color:#555; font-size:13px; margin-right:0; }
+.tab.active { background:rgba(255,255,255,.85); color:#1976d2; font-weight:600; border-bottom:1px solid #fff; margin-bottom:-1px; }
+.spacer { flex:1; }
+.lang { font-size:11px; padding:2px 6px; border:1px solid #aaa; border-radius:3px; background:#fff; margin-right:6px; margin-bottom:2px; }
+
+/* Content area */
+.content { flex:1; display:flex; flex-direction:column; background:linear-gradient(135deg,#2c3e50,#1a1a2e); overflow:hidden; }
+
+/* Row 1: Control Card + Help */
+.row-top { display:flex; gap:8px; padding:16px 16px 4px; }
+.control-card { flex:1; background:rgba(255,255,255,.92); border:1px solid #ddd; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+.control-row { display:flex; gap:8px; align-items:center; }
+.control-label { font-size:11px; color:#555; width:60px; text-align:right; }
+.control-combo { height:24px; border:1px solid #bbb; border-radius:4px; background:#fff; padding:0 6px; font-size:11px; width:140px; }
+.control-btn { padding:4px 14px; border:1px solid #aaa; border-radius:4px; background:#f5f5f5; font-size:11px; cursor:pointer; }
+.control-btn.primary { background:#1976d2; color:#fff; border-color:#0066b8; }
+.control-btn.danger { background:#c62828; color:#fff; border-color:#b71c1c; }
+.help-card { width:200px; background:rgba(255,255,255,.7); border:1px solid rgba(204,204,204,.5); border-radius:6px; padding:8px 10px; font-size:10px; color:#777; display:flex; flex-direction:column; gap:2px; }
+.help-title { font-weight:600; font-size:11px; color:#555; margin-bottom:2px; }
+
+/* Row 2: Preview + Panels (side by side) */
+.row-main { flex:1; display:flex; gap:8px; padding:4px 16px 16px; min-height:0; }
+.preview-area { flex:1; display:flex; align-items:center; justify-content:center; background:rgba(10,10,10,.3); border:2px solid #444; border-radius:6px; position:relative; overflow:hidden; }
+.preview-text { color:rgba(255,255,255,.5); font-size:20px; }
+.aspect-16-9 { position:absolute; border:1px dashed rgba(255,255,255,.15); }
+.side-panels { width:320px; display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+
+/* PTZ Panel */
+.ptz-panel { flex:1; background:rgba(255,255,255,.85); border:1px solid #ddd; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+.panel-title { font-size:12px; font-weight:600; color:#555; }
+.ptz-grid { display:grid; grid-template-columns:repeat(3,32px); grid-template-rows:repeat(3,28px); gap:2px; justify-content:center; }
+.ptz-btn { border:1px solid #aaa; border-radius:6px; background:#f5f5f5; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.ptz-btn.home { font-size:9px; background:#e0e0e0; color:#555; font-weight:600; }
+.zoom-row { display:flex; gap:6px; justify-content:center; }
+.zoom-btn { padding:2px 8px; border:1px solid #aaa; border-radius:4px; background:#f5f5f5; font-size:10px; }
+.preset-row { display:flex; gap:2px; }
+.preset-num { width:24px; height:20px; border:1px solid #aaa; border-radius:3px; background:#f5f5f5; font-size:9px; display:flex; align-items:center; justify-content:center; }
+.preset-action { padding:1px 4px; border:1px solid #aaa; border-radius:3px; background:#f5f5f5; font-size:9px; }
+.slider-row { display:flex; gap:8px; align-items:center; font-size:10px; color:#666; }
+.slider { flex:1; height:4px; background:#ddd; border-radius:2px; }
+.slider-val { font-size:10px; width:16px; text-align:center; color:#333; }
+
+/* VISCA Panel */
+.visca-panel { background:rgba(255,255,255,.85); border:1px solid #ddd; border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+.visca-tabs { display:flex; gap:0; border-bottom:1px solid #ccc; }
+.visca-tab { padding:4px 12px; background:#e0e0e0; border:1px solid #ccc; border-radius:4px 4px 0 0; font-size:10px; color:#777; margin-bottom:-1px; }
+.visca-tab.active { background:#fff; color:#333; border-bottom:1px solid #fff; }
+.visca-row { display:flex; gap:6px; align-items:center; font-size:10px; }
+.visca-label { color:#666; }
+.visca-field { width:80px; height:22px; border:1px solid #bbb; border-radius:3px; padding:0 4px; font-size:10px; }
+.visca-btn { padding:2px 12px; border:none; border-radius:3px; background:#1976d2; color:#fff; font-size:10px; }
+.reverse-toggle { font-size:9px; padding:2px 4px; border:1px solid #1976d2; border-radius:3px; color:#1976d2; background:#fff; font-weight:bold; }
+.monitor { height:40px; background:#fafafa; border:1px solid #ddd; border-radius:4px; font-size:9px; font-family:Consolas,monospace; color:#666; padding:2px 4px; overflow:hidden; }
+
+/* Status bar */
+.status-bar { height:24px; background:#f0f0f0; border-top:1px solid #ddd; display:flex; align-items:center; padding:0 8px; font-size:11px; color:#888; gap:12px; }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab">USB</div>
+    <div class="tab">RTSP</div>
+    <div class="tab">NDI</div>
+    <div class="tab">ONVIF</div>
+    <div class="tab active">USB</div>
+    <div class="spacer"></div>
+    <div class="lang">English</div>
+  </div>
+
+  <div class="content">
+    <!-- Row 1: Control + Help -->
+    <div class="row-top">
+      <div class="control-card">
+        <div class="control-row">
+          <span class="control-label">设备:</span>
+          <select class="control-combo"><option>USB Camera (1920x1080)</option></select>
+          <button class="control-btn primary">播放</button>
+        </div>
+        <div class="control-row">
+          <span class="control-label">分辨率:</span>
+          <select class="control-combo" style="width:100px"><option>1920x1080</option></select>
+          <span class="control-label" style="width:40px">格式:</span>
+          <select class="control-combo" style="width:80px"><option>MJPG</option></select>
+          <span class="control-label" style="width:40px">帧率:</span>
+          <select class="control-combo" style="width:70px"><option>30fps</option></select>
+        </div>
+      </div>
+      <div class="help-card">
+        <div class="help-title">USB 使用说明</div>
+        <div>1. 下拉选择 USB 摄像头设备</div>
+        <div>2. 点击「播放」开始预览</div>
+        <div>3. 点击「停止」结束预览</div>
+        <div>4. 可切换分辨率、格式和帧率</div>
+        <div>5. 点「刷新」重新检测设备</div>
+      </div>
+    </div>
+
+    <!-- Row 2: Preview + Side Panels -->
+    <div class="row-main">
+      <div class="preview-area">
+        <div class="preview-text">视频预览区</div>
+        <!-- 16:9 aspect ratio outline -->
+        <div class="aspect-16-9" style="width:80%;height:0;padding-bottom:45%;top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+      </div>
+
+      <div class="side-panels">
+        <!-- PTZ Panel -->
+        <div class="ptz-panel">
+          <div class="panel-title">PTZ 控制</div>
+          <div class="ptz-grid">
+            <button class="ptz-btn">↖</button><button class="ptz-btn">▲</button><button class="ptz-btn">↗</button>
+            <button class="ptz-btn">◀</button><button class="ptz-btn home">Home</button><button class="ptz-btn">▶</button>
+            <button class="ptz-btn">↙</button><button class="ptz-btn">▼</button><button class="ptz-btn">↘</button>
+          </div>
+          <div class="zoom-row">
+            <button class="zoom-btn">变焦+</button><button class="zoom-btn">聚焦+</button>
+            <button class="zoom-btn">变焦-</button><button class="zoom-btn">聚焦-</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;font-size:10px;color:#666">
+            <span>预置位</span>
+            <div class="preset-row">
+              <div class="preset-num">0</div><div class="preset-num">1</div><div class="preset-num">2</div><div class="preset-num">3</div><div class="preset-num">4</div>
+              <div class="preset-num">5</div><div class="preset-num">6</div><div class="preset-num">7</div><div class="preset-num">8</div><div class="preset-num">9</div>
+            </div>
+            <button class="preset-action" style="margin-left:4px">设置</button>
+            <button class="preset-action">清除</button>
+            <button class="preset-action">调用</button>
+          </div>
+          <div class="slider-row">
+            <span>云台速度</span><div class="slider"></div><span class="slider-val">12</span>
+          </div>
+          <div class="slider-row">
+            <span>变焦速度</span><div class="slider"></div><span class="slider-val">4</span>
+          </div>
+        </div>
+
+        <!-- VISCA Panel -->
+        <div class="visca-panel">
+          <div class="panel-title">VISCA 控制</div>
+          <div class="visca-tabs">
+            <div class="visca-tab active">网络</div>
+            <div class="visca-tab">串口</div>
+          </div>
+          <div class="visca-row">
+            <span class="visca-label">协议:</span><select class="control-combo" style="width:60px;height:22px;font-size:10px"><option>TCP</option></select>
+            <span class="visca-label">地址:</span><input class="visca-field" value="192.168.2.254">
+            <span class="reverse-toggle">方向反转 ✔</span>
+          </div>
+          <div class="visca-row">
+            <span class="visca-label">端口:</span><input class="visca-field" style="width:50px" value="5678">
+            <button class="visca-btn">连接</button>
+            <span style="font-size:10px;color:#2e7d32">已连接</span>
+          </div>
+          <div class="monitor">[13:33:01] TX: 81 01 06 01 ... FF | [13:33:02] RX: 90 50 FF</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span>状态: Ready</span>
+    <span>1920×1080 | 源:H264 | 30.0fps | 12ms</span>
+    <span style="margin-left:auto">V 0.33.508</span>
+  </div>
+</div>
+
+<br>
+<div style="color:#ccc;text-align:center;font-size:12px">
+  PTZ-Cam-Tools Layout V2 Prototype — 预览最大化 16:9，PTZ/VISCA 右侧纵向排列
+</div>
+
+</body>
+</html>

@@ -3,10 +3,10 @@
 # Window constants
 ASPECT_W: int = 16
 ASPECT_H: int = 10
-MIN_WIDTH: int = 800
+MIN_WIDTH: int = 900
 MIN_HEIGHT: int = 500
-DEFAULT_WIDTH: int = 960
-DEFAULT_HEIGHT: int = 850
+DEFAULT_WIDTH: int = 1100
+DEFAULT_HEIGHT: int = 780
 
 # Version info
 VERSION: str = "0.33.508"
