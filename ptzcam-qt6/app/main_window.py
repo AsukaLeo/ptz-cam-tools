@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
         sys_lang = locale.getdefaultlocale()[0] if hasattr(locale, 'getdefaultlocale') else ""
         self._lang_combo.setCurrentIndex(0 if not sys_lang or sys_lang.startswith('zh') else 1)
         self._lang_combo.currentIndexChanged.connect(self._on_language_changed)
-        self._lang_combo.setFixedWidth(80)
+        self._lang_combo.setFixedWidth(100)
         self.tab_widget.setCornerWidget(self._lang_combo, Qt.TopRightCorner)
         
         # Connect tab change signal
@@ -270,8 +270,8 @@ class MainWindow(QMainWindow):
             self._active_tab_name = tab_names[index]
 
         status = statuses[index] if index < len(statuses) else STATUS_READY
-        self._logger.debug(f"Tab changed to: {tab_names[index] if index < len(tab_names) else 'Unknown'}")
-        self.update_status(status)
+        from app.utils.i18n import tr
+        self.update_status(tr(status))
 
         # Refresh video info from the active tab's cache
         if index < len(tab_names):
@@ -282,12 +282,24 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(0, self._update_preview_sizes)
 
     def _on_language_changed(self, index: int) -> None:
-        """Handle language switch (placeholder for i18n).
+        """Handle language switch.
 
         Args:
             index: 0=中文, 1=English.
         """
-        self._logger.info(f"Language changed to: {'中文' if index == 0 else 'English'}")
+        from app.utils.i18n import set_language
+        lang = "zh" if index == 0 else "en"
+        set_language(lang)
+        self._update_tab_labels()
+        self._logger.info(f"Language: {lang}")
+
+    def _update_tab_labels(self) -> None:
+        """Update all tab labels after language change."""
+        from app.utils.i18n import tr
+        self.tab_widget.setTabText(0, tr(TAB_USB))
+        self.tab_widget.setTabText(1, tr(TAB_RTSP))
+        self.tab_widget.setTabText(2, tr(TAB_NDI))
+        self.tab_widget.setTabText(3, tr(TAB_ONVIF))
 
     def _update_video_info_from_tab(self, tab: QWidget) -> None:
         """Read cached video info from a tab and display it.
