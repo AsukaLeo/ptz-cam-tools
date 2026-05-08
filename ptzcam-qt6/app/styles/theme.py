@@ -52,10 +52,11 @@ def _bg_section(bg_image_path: str) -> str:
     if bg_image_path and os.path.exists(bg_image_path):
         return f"""
         QMainWindow {{
-            background-image: url({bg_image_path});
-            background-repeat: no-repeat;
-            background-position: center;
+            border-image: url({bg_image_path}) 0 0 0 0 stretch stretch;
         }}
+        """
+    return f"""
+        QMainWindow {{ background-color: {COLOR_BG_MAIN}; }}
         """
     return f"""
         QMainWindow {{ background-color: {COLOR_BG_MAIN}; }}
