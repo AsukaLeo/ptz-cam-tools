@@ -17,6 +17,7 @@ from app.styles.theme import (
 from app.utils.network_utils import get_nic_choices
 from app.utils.ndi_capture import NDISourceFinder, NDICapture, NDISource
 from app.utils.logger import get_logger
+from app.utils.i18n import tr
 from app.widgets import ControlCard, HelpCard
 
 
@@ -402,6 +403,11 @@ class NDITab(QWidget):
         """
         if self.on_status_update:
             self.on_status_update(message)
+
+    def refresh_language(self) -> None:
+        """Update all UI text for current language."""
+        from app.utils.i18n import refresh_widget
+        refresh_widget(self)
 
     def set_status_callback(self, callback: Callable[[str], None]) -> None:
         """Set the status update callback.

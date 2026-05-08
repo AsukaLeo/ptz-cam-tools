@@ -97,3 +97,33 @@ def tr(text: str) -> str:
     if entry:
         return entry.get(_current_lang, text)
     return text
+
+
+def refresh_widget(parent) -> None:
+    """Recursively refresh all translatable widgets under a parent.
+
+    Handles QLabel, QPushButton, QTabWidget tabs, and QComboBox items.
+    Call this from each module's refresh_language() method.
+    """
+    from PySide6.QtWidgets import QLabel, QPushButton, QTabWidget, QComboBox
+    for child in parent.findChildren((QLabel, QPushButton)):
+        if isinstance(child, QPushButton):
+            current = child.text()
+            if current:
+                translated = tr(current)
+                if translated != current:
+                    child.setText(translated)
+        elif isinstance(child, QLabel):
+            current = child.text()
+            if current and len(current) > 1:
+                translated = tr(current)
+                if translated != current:
+                    child.setText(translated)
+
+    # QTabWidget tabs
+    for tab_widget in parent.findChildren(QTabWidget):
+        for i in range(tab_widget.count()):
+            current = tab_widget.tabText(i)
+            translated = tr(current)
+            if translated != current:
+                tab_widget.setTabText(i, translated)

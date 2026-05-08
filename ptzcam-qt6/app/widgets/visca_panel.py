@@ -16,6 +16,7 @@ from app.styles.theme import (
     get_visca_tab_style,
     get_visca_connect_button_style,
 )
+from app.utils.i18n import tr
 from app.utils.constants import (
     BAUD_RATES, DATA_BITS, PARITY_BITS, STOP_BITS,
     NETWORK_PROTOCOLS,
@@ -578,6 +579,15 @@ class VISCAPanel(QFrame):
     def set_status_callback(self, callback: Callable[[str], None]) -> None:
         """Set the status update callback."""
         self.on_status_update = callback
+
+    def refresh_language(self) -> None:
+        """Update all UI text for current language."""
+        from app.utils.i18n import refresh_widget
+        refresh_widget(self)
+        # Update direction reverse button text
+        if hasattr(self, '_tilt_reverse_btn'):
+            checked = self._tilt_reverse_btn.isChecked()
+            self._tilt_reverse_btn.setText(tr("方向反转 \u2714") if checked else tr("方向反转"))
 
     def set_connection_callback(self, callback: Callable[[bool], None]) -> None:
         """Set callback for VISCA connection state changes (True=connected)."""

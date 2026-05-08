@@ -287,24 +287,33 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(0, self._update_preview_sizes)
 
     def _on_language_changed(self, index: int) -> None:
-        """Handle language switch.
+        """Handle language switch — refresh all UI text.
 
         Args:
             index: 0=中文, 1=English.
         """
-        from app.utils.i18n import set_language
+        from app.utils.i18n import set_language, tr
         lang = "zh" if index == 0 else "en"
         set_language(lang)
-        self._update_tab_labels()
-        self._logger.info(f"Language: {lang}")
 
-    def _update_tab_labels(self) -> None:
-        """Update all tab labels after language change."""
-        from app.utils.i18n import tr
+        # Tab names
         self.tab_widget.setTabText(0, tr(TAB_USB))
         self.tab_widget.setTabText(1, tr(TAB_RTSP))
         self.tab_widget.setTabText(2, tr(TAB_NDI))
         self.tab_widget.setTabText(3, tr(TAB_ONVIF))
+
+        # Notify all panels
+        for panel in [self._ptz_panel, self._visca_panel]:
+            if hasattr(panel, 'refresh_language'):
+                panel.refresh_language()
+        for tab in self._tab_widgets.values():
+            if hasattr(tab, 'refresh_language'):
+                tab.refresh_language()
+
+        # Refresh status bar
+        self.update_status(tr(self.status_label.text().replace("状态: ", "").replace("Status: ", "")))
+
+        self._logger.info(f"Language: {lang}")
 
     def _update_video_info_from_tab(self, tab: QWidget) -> None:
         """Read cached video info from a tab and display it.

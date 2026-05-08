@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 from typing import Optional, Callable
 
 from app.styles.theme import get_ptz_panel_style
+from app.utils.i18n import tr, on_language_change
 
 class PTZPanel(QFrame):
     """PTZ (Pan-Tilt-Zoom) control panel widget.
@@ -48,6 +49,11 @@ class PTZPanel(QFrame):
         self._setup_ui()
         self.set_connected(False)  # Start disabled until VISCA connects
 
+    def refresh_language(self) -> None:
+        """Update all UI text for current language."""
+        from app.utils.i18n import refresh_widget
+        refresh_widget(self)
+
     def _setup_ui(self) -> None:
         """Set up the panel UI."""
         layout = QVBoxLayout(self)
@@ -56,14 +62,14 @@ class PTZPanel(QFrame):
         layout.setAlignment(Qt.AlignTop)
 
         # Title
-        title = QLabel("PTZ 控制")
-        title.setStyleSheet("""
+        self._title_label = QLabel(tr("PTZ 控制"))
+        self._title_label.setStyleSheet("""
             QLabel {
                 font-size: 12px; font-weight: 500; color: #555;
                 background: transparent;
             }
         """)
-        layout.addWidget(title)
+        layout.addWidget(self._title_label)
 
         # Top row: dpad + zoom/focus + preset controls
         controls_layout = QHBoxLayout()
@@ -171,17 +177,17 @@ class PTZPanel(QFrame):
 
         zr = QHBoxLayout()
         zr.setSpacing(8)
-        zr.addWidget(self._create_press_btn("变焦+", lambda: self._do_zoom(1),
+        zr.addWidget(self._create_press_btn(tr("变焦+"), lambda: self._do_zoom(1),
                                             lambda: self._do_zoom(0)))
-        zr.addWidget(self._create_press_btn("聚焦+", lambda: self._do_focus(3),
+        zr.addWidget(self._create_press_btn(tr("聚焦+"), lambda: self._do_focus(3),
                                             lambda: self._do_focus(0)))
         zf.addLayout(zr)
 
         fr = QHBoxLayout()
         fr.setSpacing(8)
-        fr.addWidget(self._create_press_btn("变焦-", lambda: self._do_zoom(-1),
+        fr.addWidget(self._create_press_btn(tr("变焦-"), lambda: self._do_zoom(-1),
                                             lambda: self._do_zoom(0)))
-        fr.addWidget(self._create_press_btn("聚焦-", lambda: self._do_focus(-3),
+        fr.addWidget(self._create_press_btn(tr("聚焦-"), lambda: self._do_focus(-3),
                                             lambda: self._do_focus(0)))
         zf.addLayout(fr)
 
@@ -200,7 +206,7 @@ class PTZPanel(QFrame):
         outer = QVBoxLayout()
         outer.setSpacing(6)
 
-        label = QLabel("预置位")
+        label = QLabel(tr("预置位"))
         label.setStyleSheet(
             "font-size: 11px; color: #666; background: transparent;"
         )
@@ -221,15 +227,15 @@ class PTZPanel(QFrame):
         action_row = QHBoxLayout()
         action_row.setSpacing(4)
 
-        set_btn = self._create_preset_action_btn("设置")
+        set_btn = self._create_preset_action_btn(tr("设置"))
         set_btn.clicked.connect(self._on_set_preset)
         action_row.addWidget(set_btn)
 
-        clear_btn = self._create_preset_action_btn("清除")
+        clear_btn = self._create_preset_action_btn(tr("清除"))
         clear_btn.clicked.connect(self._on_clear_preset)
         action_row.addWidget(clear_btn)
 
-        recall_btn = self._create_preset_action_btn("调用")
+        recall_btn = self._create_preset_action_btn(tr("调用"))
         recall_btn.clicked.connect(self._on_recall_preset)
         action_row.addWidget(recall_btn)
 
@@ -375,7 +381,7 @@ class PTZPanel(QFrame):
         # Pan/Tilt speed slider
         ptz_group = QVBoxLayout()
         ptz_group.setSpacing(2)
-        ptz_label = QLabel("云台速度")
+        ptz_label = QLabel(tr("云台速度"))
         ptz_label.setStyleSheet(
             "font-size: 11px; color: #666; background: transparent;"
         )
@@ -404,7 +410,7 @@ class PTZPanel(QFrame):
         # Zoom speed slider
         zoom_group = QVBoxLayout()
         zoom_group.setSpacing(2)
-        zoom_label = QLabel("变焦速度")
+        zoom_label = QLabel(tr("变焦速度"))
         zoom_label.setStyleSheet(
             "font-size: 11px; color: #666; background: transparent;"
         )

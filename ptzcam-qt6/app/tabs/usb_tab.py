@@ -17,6 +17,7 @@ from app.utils.logger import get_logger
 from app.styles.theme import (
     get_standard_button_style, get_primary_button_style, get_danger_button_style,
 )
+from app.utils.i18n import tr
 from app.widgets import ControlCard, HelpCard
 
 import psutil
@@ -592,6 +593,11 @@ class USBTab(QWidget):
         if self.on_status_update:
             self.on_status_update(message)
     
+    def refresh_language(self) -> None:
+        """Update all UI text for current language."""
+        from app.utils.i18n import refresh_widget
+        refresh_widget(self)
+
     def set_status_callback(self, callback: Callable[[str], None]) -> None:
         """Set the status update callback.
 
