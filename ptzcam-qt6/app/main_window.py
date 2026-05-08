@@ -129,15 +129,14 @@ class MainWindow(QMainWindow):
         # Language switcher in tab bar corner
         self._lang_combo = QComboBox()
         self._lang_combo.addItems(["中文", "English"])
+        self._lang_combo.setStyleSheet(
+            "QComboBox { font-size: 10px; padding: 1px 2px; min-width: 70px; }"
+        )
         # Detect system language
         import locale
         sys_lang = locale.getdefaultlocale()[0] if hasattr(locale, 'getdefaultlocale') else ""
         self._lang_combo.setCurrentIndex(0 if not sys_lang or sys_lang.startswith('zh') else 1)
         self._lang_combo.currentIndexChanged.connect(self._on_language_changed)
-        self._lang_combo.setFixedWidth(90)
-        self._lang_combo.setStyleSheet(
-            "QComboBox { font-size: 11px; padding: 1px 4px; }"
-        )
         self.tab_widget.setCornerWidget(self._lang_combo, Qt.TopRightCorner)
         
         # Connect tab change signal
