@@ -141,6 +141,9 @@ class MainWindow(QMainWindow):
         self._lang_combo.setCurrentIndex(0 if not sys_lang or sys_lang.startswith('zh') else 1)
         self._lang_combo.currentIndexChanged.connect(self._on_language_changed)
         self.tab_widget.setCornerWidget(lang_wrapper, Qt.TopRightCorner)
+
+        # Force initial language refresh (may not trigger via indexChanged if already 0)
+        QTimer.singleShot(100, lambda: self._on_language_changed(self._lang_combo.currentIndex()))
         
         # Connect tab change signal
         self.tab_widget.currentChanged.connect(self._on_tab_changed)
