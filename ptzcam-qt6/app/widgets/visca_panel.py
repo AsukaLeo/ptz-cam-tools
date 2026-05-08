@@ -5,7 +5,7 @@ import threading
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QGridLayout,
     QLabel, QPushButton, QComboBox, QLineEdit,
-    QTabWidget, QWidget
+    QTabWidget, QWidget, QSizePolicy,
 )
 from PySide6.QtCore import Qt, QTimer
 from typing import Optional, Callable
@@ -228,7 +228,7 @@ class VISCAPanel(QFrame):
         self._tilt_reverse_btn.setCheckable(True)
         self._tilt_reverse_btn.setChecked(True)
         self._tilt_reverse_btn.setSizePolicy(
-            QPushButton.SizePolicy.Minimum, QPushButton.SizePolicy.Fixed
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
         )
         self._tilt_reverse_btn.setToolTip("部分 VISCA 协议上下方向相反时取消勾选")
         self._tilt_reverse_btn.setStyleSheet("""
