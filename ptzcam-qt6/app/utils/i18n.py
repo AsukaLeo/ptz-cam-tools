@@ -87,15 +87,26 @@ def on_language_change(callback: Callable[[str], None]) -> None:
 def tr(text: str) -> str:
     """Translate a text string to the current language.
 
+    Supports both forward lookup (zh key → en) and reverse lookup
+    (en value → zh key) for round-trip language switching.
+
     Args:
-        text: Original text (Chinese or English key).
+        text: Text to translate (can be Chinese or English).
 
     Returns:
         Translated text.
     """
+    # Direct lookup: text is a known key
     entry = _TRANSLATIONS.get(text)
     if entry:
         return entry.get(_current_lang, text)
+
+    # Reverse lookup: text might be a translated value from another language
+    for key, langs in _TRANSLATIONS.items():
+        for lv in langs.values():
+            if lv == text:
+                return langs.get(_current_lang, text)
+
     return text
 
 
