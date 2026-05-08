@@ -196,6 +196,22 @@ class VISCAPanel(QFrame):
         )
         grid.addWidget(self._serial_status, 2, 0, 1, 6)
 
+        # Serial data monitor (shared with network tab)
+        from PySide6.QtWidgets import QTextEdit
+        self._serial_monitor_serial = QTextEdit()
+        self._serial_monitor_serial.setReadOnly(True)
+        self._serial_monitor_serial.setFixedHeight(60)
+        self._serial_monitor_serial.setStyleSheet(
+            "QTextEdit {"
+            "  color: #555; font-size: 10px; font-family: Consolas, monospace;"
+            "  background: #fafafa; border: 1px solid #ddd; border-radius: 4px;"
+            "  padding: 2px 4px;"
+            "}"
+        )
+        self._serial_monitor_serial.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._serial_monitor_serial.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        grid.addWidget(self._serial_monitor_serial, 3, 0, 1, 6)
+
         grid.setColumnStretch(6, 1)
         return page
 
@@ -594,7 +610,7 @@ class VISCAPanel(QFrame):
         self._on_connection_changed = callback
 
     def log_serial_data(self, direction: str, data: bytes) -> None:
-        """Append serial TX/RX data to the monitor.
+        """Append serial TX/RX data to both monitor tabs.
 
         Args:
             direction: 'TX' or 'RX'.
@@ -603,14 +619,13 @@ class VISCAPanel(QFrame):
         hex_str = ' '.join(f'{b:02X}' for b in data)
         ts = time.strftime('%H:%M:%S')
         line = f"[{ts}] {direction}: {hex_str}"
-        self._serial_monitor.append(line)
-        # Auto-scroll to bottom
-        sb = self._serial_monitor.verticalScrollBar()
-        sb.setValue(sb.maximum())
-        # Keep only last 200 lines
-        if self._serial_monitor.document().blockCount() > 200:
-            cursor = self._serial_monitor.textCursor()
-            cursor.movePosition(cursor.Start)
-            cursor.select(cursor.BlockUnderCursor)
-            cursor.removeSelectedText()
-            cursor.deleteChar()
+        for monitor in [self._serial_monitor, self._serial_monitor_serial]:
+            monitor.append(line)
+            sb = monitor.verticalScrollBar()
+            sb.setValue(sb.maximum())
+            if monitor.document().blockCount() > 200:
+                cursor = monitor.textCursor()
+                cursor.movePosition(cursor.Start)
+                cursor.select(cursor.BlockUnderCursor)
+                cursor.removeSelectedText()
+                cursor.deleteChar()
