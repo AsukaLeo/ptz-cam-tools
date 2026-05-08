@@ -83,6 +83,8 @@ class ViscaController:
             return False
 
         self._transport = transport
+        if self._on_data:
+            self._transport.set_data_callback(self._on_data)
         self._transport_type = "serial"
         self.is_connected = True
         self._init_address()
@@ -106,6 +108,8 @@ class ViscaController:
             return False
 
         self._transport = transport
+        if self._on_data:
+            self._transport.set_data_callback(self._on_data)
         self._transport_type = "udp"
         self.is_connected = True
         self._init_address()
@@ -129,6 +133,8 @@ class ViscaController:
             return False
 
         self._transport = transport
+        if self._on_data:
+            self._transport.set_data_callback(self._on_data)
         self._transport_type = "tcp"
         self.is_connected = True
         self._init_address()
@@ -302,9 +308,6 @@ class ViscaController:
             True if command was sent.
         """
         try:
-            # Notify data callback for TX monitoring
-            if self._on_data:
-                self._on_data('TX', cmd)
             # UDP is connectionless and may lose packets; retry to improve
             # reliability. TCP and Serial are reliable, send once.
             retries = self._STOP_RETRY_COUNT if self._transport_type == "udp" else 1

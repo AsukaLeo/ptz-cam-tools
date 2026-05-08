@@ -10,7 +10,7 @@ Reference: misterhay/VISCA-IP-Controller
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Callable
 import socket
 import time
 
@@ -20,11 +20,22 @@ _logger = get_logger(__name__)
 
 
 class ViscaTransport(ABC):
-    """Abstract base class for VISCA transports.
+    """Abstract base class for VISCA transports. Includes data monitoring for TX/RX."""
 
-    Provides a unified interface for sending VISCA commands and
-    receiving responses, regardless of the underlying transport.
-    """
+    def __init__(self):
+        self._on_data: Optional[Callable[[str, bytes], None]] = None
+
+    def set_data_callback(self, callback: Callable[[str, bytes], None]) -> None:
+        """Set callback for TX/RX data monitoring (direction: 'TX' or 'RX')."""
+        self._on_data = callback
+
+    def _notify_tx(self, data: bytes) -> None:
+        if self._on_data:
+            self._on_data('TX', data)
+
+    def _notify_rx(self, data: bytes) -> None:
+        if self._on_data:
+            self._on_data('RX', data)
 
     @abstractmethod
     def send(self, data: bytes) -> None:
@@ -152,6 +163,7 @@ class SerialTransport(ViscaTransport):
         if self._serial and self._serial.is_open:
             self._serial.write(data)
             self._serial.flush()
+            self._notify_tx(data)
 
     def receive(self, timeout_ms: int = 1000) -> Optional[bytes]:
         """Read response from serial port.
@@ -174,11 +186,16 @@ class SerialTransport(ViscaTransport):
                 if byte:
                     buf.extend(byte)
                     if byte[0] == 0xFF:
-                        return bytes(buf)
+                        result = bytes(buf)
+                        self._notify_rx(result)
+                        return result
             else:
                 time.sleep(0.01)
 
-        return bytes(buf) if buf else None
+        result = bytes(buf) if buf else None
+        if result:
+            self._notify_rx(result)
+        return result
 
     def is_connected(self) -> bool:
         return self._serial is not None and self._serial.is_open
@@ -234,6 +251,7 @@ class UdpTransport(ViscaTransport):
         """
         if self._sock:
             self._sock.sendto(data, (self._host, self._port))
+            self._notify_tx(data)
 
     def receive(self, timeout_ms: int = 1000) -> Optional[bytes]:
         """Receive response from UDP socket.
@@ -250,6 +268,7 @@ class UdpTransport(ViscaTransport):
         self._sock.settimeout(timeout_ms / 1000)
         try:
             data, _ = self._sock.recvfrom(1024)
+            self._notify_rx(data)
             return data
         except socket.timeout:
             return None
@@ -314,6 +333,7 @@ class TcpTransport(ViscaTransport):
         if self._sock:
             try:
                 self._sock.sendall(data)
+                self._notify_tx(data)
             except Exception as e:
                 self._logger.error(f"TCP send error: {e}")
 
@@ -332,6 +352,7 @@ class TcpTransport(ViscaTransport):
         self._sock.settimeout(timeout_ms / 1000)
         try:
             data = self._sock.recv(1024)
+            self._notify_rx(data)
             return data
         except socket.timeout:
             return None
