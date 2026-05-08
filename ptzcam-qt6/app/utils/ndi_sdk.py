@@ -11,7 +11,7 @@ ctypes function wrappers rather than the vtable loading pattern.
 import ctypes
 import os
 from ctypes import (
-    c_bool, c_int, c_int64, c_float, c_char_p, c_void_p,
+    c_bool, c_int, c_int64, c_float, c_double, c_char_p, c_void_p,
     c_uint8, c_uint32, POINTER, Structure, CFUNCTYPE
 )
 from typing import Optional, List, Tuple
@@ -197,6 +197,22 @@ class metadata_frame_t(Structure):
         ("length", c_int),
         ("timecode", c_int64),
         ("p_data", c_char_p),
+    ]
+
+
+class recv_performance_t(Structure):
+    """NDIlib_recv_performance_t — per-connection frame statistics."""
+    _fields_ = [
+        ("video_frames", c_int64),
+        ("audio_frames", c_int64),
+        ("metadata_frames", c_int64),
+        ("dropped_frames", c_int64),
+        ("total_received_packets", c_int64),
+        ("total_lost_packets", c_int64),
+        ("total_reordered_packets", c_int64),
+        ("average_latency_us", c_int64),
+        ("average_received_fps", c_double),
+        ("average_bandwidth", c_int64),
     ]
 
 
@@ -391,3 +407,16 @@ def recv_free_string(recv: int, string: c_char_p) -> None:
         string: String pointer to free.
     """
     _fn("NDIlib_recv_free_string", None, [c_void_p, c_char_p])(recv, string)
+
+
+def recv_get_performance(recv: int, perf: recv_performance_t) -> None:
+    """Get performance statistics for the receiver.
+
+    Populates total_received_packets, dropped_frames, video_frames, etc.
+
+    Args:
+        recv: Receiver handle.
+        perf: Performance struct to populate.
+    """
+    _fn("NDIlib_recv_get_performance", None,
+        [c_void_p, POINTER(recv_performance_t)])(recv, ctypes.byref(perf))
