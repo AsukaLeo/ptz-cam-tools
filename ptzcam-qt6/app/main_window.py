@@ -2,7 +2,7 @@
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QStatusBar, QTabWidget
+    QLabel, QStatusBar, QTabWidget, QComboBox
 )
 from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QResizeEvent
@@ -11,11 +11,11 @@ from typing import Optional, Callable
 from app.utils.constants import (
     MIN_WIDTH, MIN_HEIGHT, DEFAULT_WIDTH, DEFAULT_HEIGHT,
     VERSION_STRING, STATUS_READY,
-    TAB_USB, TAB_RTSP, TAB_NDI, TAB_ONVIF, TAB_SETTINGS,
+    TAB_USB, TAB_RTSP, TAB_NDI, TAB_ONVIF,
 )
 from app.styles.theme import get_global_stylesheet
 from app.widgets import PreviewWidget, PTZPanel, VISCAPanel
-from app.tabs import USBTab, RTSPTab, NDITab, ONVIFTab, SettingsTab
+from app.tabs import USBTab, RTSPTab, NDITab, ONVIFTab
 from app.utils.logger import get_logger
 from app.utils.visca_controller import ViscaController
 
@@ -93,15 +93,13 @@ class MainWindow(QMainWindow):
         self._ndi_tab.set_video_info_callback(self._make_video_info_callback(TAB_NDI))
         self._onvif_tab = ONVIFTab()
         self._onvif_tab.set_video_info_callback(self._make_video_info_callback(TAB_ONVIF))
-        self._settings_tab = SettingsTab()
-        
+
         # Store references
         self._tab_widgets = {
             TAB_USB: self._usb_tab,
             TAB_RTSP: self._rtsp_tab,
             TAB_NDI: self._ndi_tab,
             TAB_ONVIF: self._onvif_tab,
-            TAB_SETTINGS: self._settings_tab,
         }
         
         self._logger.debug(f"Created {len(self._tab_widgets)} tabs")
@@ -127,7 +125,17 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(self._rtsp_tab, TAB_RTSP)
         self.tab_widget.addTab(self._ndi_tab, TAB_NDI)
         self.tab_widget.addTab(self._onvif_tab, TAB_ONVIF)
-        self.tab_widget.addTab(self._settings_tab, TAB_SETTINGS)
+
+        # Language switcher in tab bar corner
+        self._lang_combo = QComboBox()
+        self._lang_combo.addItems(["中文", "English"])
+        # Detect system language
+        import locale
+        sys_lang = locale.getdefaultlocale()[0] if hasattr(locale, 'getdefaultlocale') else ""
+        self._lang_combo.setCurrentIndex(0 if not sys_lang or sys_lang.startswith('zh') else 1)
+        self._lang_combo.currentIndexChanged.connect(self._on_language_changed)
+        self._lang_combo.setFixedWidth(80)
+        self.tab_widget.setCornerWidget(self._lang_combo, Qt.TopRightCorner)
         
         # Connect tab change signal
         self.tab_widget.currentChanged.connect(self._on_tab_changed)
@@ -250,13 +258,12 @@ class MainWindow(QMainWindow):
         Args:
             index: Index of the newly selected tab.
         """
-        tab_names = [TAB_USB, TAB_RTSP, TAB_NDI, TAB_ONVIF, TAB_SETTINGS]
+        tab_names = [TAB_USB, TAB_RTSP, TAB_NDI, TAB_ONVIF]
         statuses = [
             STATUS_READY,
             "未连接",
             "未连接",
             "未连接",
-            "设置",
         ]
 
         if index < len(tab_names):
@@ -273,6 +280,14 @@ class MainWindow(QMainWindow):
 
         # Update preview sizes after tab switch
         QTimer.singleShot(0, self._update_preview_sizes)
+
+    def _on_language_changed(self, index: int) -> None:
+        """Handle language switch (placeholder for i18n).
+
+        Args:
+            index: 0=中文, 1=English.
+        """
+        self._logger.info(f"Language changed to: {'中文' if index == 0 else 'English'}")
 
     def _update_video_info_from_tab(self, tab: QWidget) -> None:
         """Read cached video info from a tab and display it.

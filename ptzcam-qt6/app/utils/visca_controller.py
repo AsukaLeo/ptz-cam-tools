@@ -313,6 +313,8 @@ class ViscaController:
             retries = self._STOP_RETRY_COUNT if self._transport_type == "udp" else 1
             for _ in range(retries):
                 self._transport.send(cmd)
+            # Drain any pending response (for RX monitoring)
+            self._transport.receive(timeout_ms=50)
             return True
         except Exception as e:
             self._logger.error(f"Command send failed: {e}")

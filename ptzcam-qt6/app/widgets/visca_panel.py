@@ -274,7 +274,7 @@ class VISCAPanel(QFrame):
         from PySide6.QtWidgets import QTextEdit
         self._serial_monitor = QTextEdit()
         self._serial_monitor.setReadOnly(True)
-        self._serial_monitor.setFixedHeight(40)
+        self._serial_monitor.setFixedHeight(60)
         self._serial_monitor.setStyleSheet(
             "QTextEdit {"
             "  color: #555; font-size: 10px; font-family: Consolas, monospace;"

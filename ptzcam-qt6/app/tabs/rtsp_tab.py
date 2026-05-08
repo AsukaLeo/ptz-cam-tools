@@ -111,7 +111,7 @@ class RTSPTab(QWidget):
         row.addWidget(ControlCard.make_label("RTSP URL:"))
         self._url_combo = QComboBox()
         self._url_combo.setEditable(True)
-        self._url_combo.setFixedWidth(350)
+        self._url_combo.setFixedWidth(400)
         self._url_combo.setInsertPolicy(QComboBox.InsertAtTop)
         self._url_combo.setMaxCount(7)  # 5 history + 2 built-in
         # Built-in defaults
