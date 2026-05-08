@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets', 'assets'), ('arrow_down.svg', '.'), ('thirdparty/ffmpeg/bin', 'thirdparty/ffmpeg/bin'), ('C:/Users/asuka/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/wsdl', 'wsdl')],
+    datas=[('assets', 'assets'), ('arrow_down.svg', '.'), ('C:/Users/asuka/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/wsdl', 'wsdl')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -22,7 +22,8 @@ REMOVE_PREFIXES = ["cv2\\", "cv2.", "numpy\\", "numpy."]
 REMOVE_FILES = {
     "opengl32sw.dll", "PIL\\_avif", "libscipy_openblas",
     "opencv_videoio_ffmpeg", "avfilter-10.dll", "avdevice-61.dll",
-    "swresample-5.dll",
+    "swresample-5.dll", "avcodec-61.dll", "avformat-61.dll",
+    "avutil-59.dll", "swscale-8.dll",
 }
 seen = set()
 filtered = []
@@ -38,13 +39,6 @@ for b in a.binaries:
     if name.startswith(QT_PREFIX):
         mod = name[len(QT_PREFIX):].split(".")[0]
         if mod not in KEEP_QT:
-            continue
-    # Deduplicate FFmpeg DLLs
-    if name.endswith('.dll') and any(
-        name.endswith(f'{x}.dll') for x in
-        ['avcodec-61', 'avformat-61', 'avutil-59', 'swscale-8']
-    ):
-        if 'thirdparty' not in name:
             continue
     key = name.lower()
     if key in seen:
