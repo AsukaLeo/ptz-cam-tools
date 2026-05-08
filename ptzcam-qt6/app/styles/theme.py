@@ -48,11 +48,13 @@ def get_global_stylesheet(arrow_svg_path: str, bg_image_path: str = "") -> str:
 
 
 def _bg_section(bg_image_path: str) -> str:
-    """Main window background (image or solid color)."""
+    """Main window background (image fill or solid color)."""
     if bg_image_path and os.path.exists(bg_image_path):
         return f"""
         QMainWindow {{
-            border-image: url({bg_image_path}) 0 0 0 0 stretch stretch;
+            background-image: url({bg_image_path});
+            background-repeat: no-repeat;
+            background-position: center;
         }}
         """
     return f"""

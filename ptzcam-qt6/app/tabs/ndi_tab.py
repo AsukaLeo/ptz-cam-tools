@@ -189,7 +189,7 @@ class NDITab(QWidget):
                 for src in sources:
                     display = src.url if src.url else src.name
                     self._src_combo.addItem(f"{src.name}  ({display})")
-                self._src_combo.setCurrentIndex(-1)
+                self._src_combo.setCurrentIndex(0)
                 self._connect_btn.setEnabled(True)
                 self._notify_status(f"发现 {len(sources)} 个 NDI 源")
                 self._logger.info(f"Discovered {len(sources)} NDI source(s)")
