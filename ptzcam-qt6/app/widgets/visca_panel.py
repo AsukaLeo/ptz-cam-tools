@@ -85,13 +85,14 @@ class VISCAPanel(QFrame):
         visca_tab.setMinimumHeight(200)
 
         # Serial tab
-        visca_tab.addTab(self._create_serial_tab(), "串口")
+        serial_page = self._create_serial_tab()
+        visca_tab.addTab(serial_page, "串口")
 
         # Network tab
         visca_tab.addTab(self._create_network_tab(), "网络")
 
-        # Default to network tab
-        visca_tab.setCurrentIndex(1)
+        # Default to serial tab (more visible for debugging)
+        visca_tab.setCurrentIndex(0)
 
         layout.addWidget(visca_tab)
 
