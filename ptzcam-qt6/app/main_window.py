@@ -187,6 +187,9 @@ class MainWindow(QMainWindow):
         self._ptz_panel.set_controller(self._visca_controller)
         self._visca_panel.set_controller(self._visca_controller)
 
+        # Sync PTZ panel enabled state with VISCA connection
+        self._visca_panel.set_connection_callback(self._ptz_panel.set_connected)
+
         # Set up status callbacks (fallback for non-controller messages)
         self._ptz_panel.set_status_callback(self.update_status)
         self._visca_panel.set_status_callback(self.update_status)

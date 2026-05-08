@@ -49,6 +49,7 @@ class VISCAPanel(QFrame):
         self.setStyleSheet(get_visca_panel_style())
 
         self.on_status_update: Optional[Callable[[str], None]] = None
+        self._on_connection_changed: Optional[Callable[[bool], None]] = None
         self._controller: Optional['ViscaController'] = None
 
         # Serial connect state
@@ -83,6 +84,9 @@ class VISCAPanel(QFrame):
 
         # Network tab
         visca_tab.addTab(self._create_network_tab(), "网络")
+
+        # Default to network tab
+        visca_tab.setCurrentIndex(1)
 
         layout.addWidget(visca_tab)
 
@@ -201,6 +205,7 @@ class VISCAPanel(QFrame):
         grid.setContentsMargins(8, 8, 8, 8)
         grid.setSpacing(6)
 
+        # Row 0: Protocol + Address + Direction reverse
         # Protocol
         self._net_proto = QComboBox()
         self._net_proto.addItems(NETWORK_PROTOCOLS)
@@ -214,19 +219,7 @@ class VISCAPanel(QFrame):
         grid.addWidget(QLabel("地址:"), 0, 2)
         grid.addWidget(self._net_addr, 0, 3)
 
-        # Port
-        self._net_port = QLineEdit("5678")
-        self._net_port.setFixedWidth(60)
-        grid.addWidget(QLabel("端口:"), 1, 0)
-        grid.addWidget(self._net_port, 1, 1)
-
-        # Connect/Disconnect button
-        self._net_connect_btn = QPushButton("连接")
-        self._net_connect_btn.setStyleSheet(get_visca_connect_button_style())
-        self._net_connect_btn.clicked.connect(self._toggle_network)
-        grid.addWidget(self._net_connect_btn, 1, 2, 1, 2, Qt.AlignCenter)
-
-        # Direction reverse toggle button
+        # Direction reverse toggle (right of address)
         self._tilt_reverse_btn = QPushButton("方向反转 \u2714")
         self._tilt_reverse_btn.setCheckable(True)
         self._tilt_reverse_btn.setChecked(True)
@@ -248,14 +241,38 @@ class VISCAPanel(QFrame):
             }
         """)
         self._tilt_reverse_btn.toggled.connect(self._on_tilt_reverse_changed)
-        grid.addWidget(self._tilt_reverse_btn, 2, 0, 1, 2)
+        grid.addWidget(self._tilt_reverse_btn, 0, 4, 1, 2)
 
-        # Network status label
+        # Row 1: Port + Connect button
+        # Port
+        self._net_port = QLineEdit("5678")
+        self._net_port.setFixedWidth(60)
+        grid.addWidget(QLabel("端口:"), 1, 0)
+        grid.addWidget(self._net_port, 1, 1)
+
+        # Connect/Disconnect button
+        self._net_connect_btn = QPushButton("连接")
+        self._net_connect_btn.setStyleSheet(get_visca_connect_button_style())
+        self._net_connect_btn.clicked.connect(self._toggle_network)
+        grid.addWidget(self._net_connect_btn, 1, 2, 1, 2, Qt.AlignCenter)
+
+        # Row 2: Network status + Serial data monitor
         self._net_status = QLabel("")
         self._net_status.setStyleSheet(
             "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
         )
-        grid.addWidget(self._net_status, 2, 2, 1, 2)
+        grid.addWidget(self._net_status, 2, 0, 1, 3)
+
+        # Serial data readout
+        self._serial_monitor = QLabel("")
+        self._serial_monitor.setStyleSheet(
+            "color: #666; font-size: 10px; background: #f8f8f8;"
+            "border: 1px solid #ddd; border-radius: 4px;"
+            "padding: 4px 6px;"
+        )
+        self._serial_monitor.setWordWrap(True)
+        self._serial_monitor.setFixedHeight(36)
+        grid.addWidget(self._serial_monitor, 2, 3, 1, 3)
 
         grid.setColumnStretch(4, 1)
         return page
@@ -334,6 +351,9 @@ class VISCAPanel(QFrame):
 
         self._set_serial_config_enabled(not connected)
 
+        if self._on_connection_changed:
+            self._on_connection_changed(connected)
+
     def _set_network_connected(self, connected: bool) -> None:
         """Update network tab UI for connected/disconnected state.
 
@@ -359,6 +379,9 @@ class VISCAPanel(QFrame):
         # Toggle config widgets
         for w in [self._net_proto, self._net_addr, self._net_port]:
             w.setEnabled(not connected)
+
+        if self._on_connection_changed:
+            self._on_connection_changed(connected)
 
     # ------------------------------------------------------------------
     # Connection handlers
@@ -543,3 +566,7 @@ class VISCAPanel(QFrame):
     def set_status_callback(self, callback: Callable[[str], None]) -> None:
         """Set the status update callback."""
         self.on_status_update = callback
+
+    def set_connection_callback(self, callback: Callable[[bool], None]) -> None:
+        """Set callback for VISCA connection state changes (True=connected)."""
+        self._on_connection_changed = callback

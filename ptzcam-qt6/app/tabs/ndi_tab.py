@@ -328,7 +328,12 @@ class NDITab(QWidget):
             error: Error description.
         """
         self._logger.error(f"NDI error: {error}")
-        self._notify_status(f"错误: {error}")
+        # License timeout / no-frame errors: show overlay on preview
+        if "授权" in error or "试用" in error or "5秒" in error:
+            if hasattr(self.preview_widget, 'show_overlay'):
+                self.preview_widget.show_overlay(error)
+        else:
+            self._notify_status(f"错误: {error}")
 
     def _on_state_changed(self, state: str) -> None:
         """Handle NDI capture state changes.
@@ -360,6 +365,8 @@ class NDITab(QWidget):
 
         if hasattr(self.preview_widget, 'show_placeholder'):
             self.preview_widget.show_placeholder()
+        if hasattr(self.preview_widget, 'hide_overlay'):
+            self.preview_widget.hide_overlay()
 
         self._set_controls_enabled(True)
 

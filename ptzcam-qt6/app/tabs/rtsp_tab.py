@@ -58,7 +58,7 @@ class RTSPTab(QWidget):
         self._last_video_info = (0, 0, "", 0.0, 0, "", 0.0)
 
         # UI references (filled by _setup_ui)
-        self._url_edit: Optional[QLineEdit] = None
+        self._url_combo: Optional[QComboBox] = None
         self._user_edit: Optional[QLineEdit] = None
         self._pass_edit: Optional[QLineEdit] = None
         self._net_combo: Optional[QComboBox] = None
@@ -106,13 +106,20 @@ class RTSPTab(QWidget):
         """
         card = ControlCard()
 
-        # Row 1: URL + Connect/Disconnect buttons
+        # Row 1: URL (combo with history) + Connect/Disconnect
         row = card.add_row()
         row.addWidget(ControlCard.make_label("RTSP URL:"))
-        self._url_edit = QLineEdit("rtsp://192.168.2.254/PSIA/Streaming/channels/h264")
-        self._url_edit.setFixedWidth(350)
-        self._setup_line_edit(self._url_edit)
-        row.addWidget(self._url_edit)
+        self._url_combo = QComboBox()
+        self._url_combo.setEditable(True)
+        self._url_combo.setFixedWidth(350)
+        self._url_combo.setInsertPolicy(QComboBox.InsertAtTop)
+        self._url_combo.setMaxCount(7)  # 5 history + 2 built-in
+        # Built-in defaults
+        self._url_combo.addItem("rtsp://192.168.2.254/PSIA/Streaming/channels/h264")
+        self._url_combo.addItem("rtsp://192.168.1.253:554/live/av0")
+        self._url_combo.setCurrentIndex(0)
+        self._url_combo.lineEdit().returnPressed.connect(self._connect_rtsp)
+        row.addWidget(self._url_combo)
 
         self._connect_btn = QPushButton("连接")
         self._connect_btn.setStyleSheet(get_primary_button_style())
@@ -211,7 +218,7 @@ class RTSPTab(QWidget):
             True if the event was handled, False otherwise.
         """
         if event.type() == QEvent.FocusIn:
-            if obj in (self._url_edit, self._user_edit, self._pass_edit):
+            if obj in (self._user_edit, self._pass_edit):
                 # Defer selectAll to let the event loop finish first
                 QTimer.singleShot(0, obj.selectAll)
         return super().eventFilter(obj, event)
@@ -222,13 +229,23 @@ class RTSPTab(QWidget):
         Builds the full RTSP URL from UI inputs, then starts the
         RTSPSource capture thread.
         """
-        if self._url_edit is None:
+        if self._url_combo is None:
             return
 
-        raw_url = self._url_edit.text().strip()
+        raw_url = self._url_combo.currentText().strip()
         if not raw_url:
             self._notify_status("请输入 RTSP URL")
             return
+
+        # Save URL to combo history (dedup, cap at 5 history + 2 built-in)
+        idx = self._url_combo.findText(raw_url)
+        if idx >= 0:
+            self._url_combo.removeItem(idx)
+        self._url_combo.insertItem(0, raw_url)
+        self._url_combo.setCurrentIndex(0)
+        # Keep max 7 (5 history + 2 built-in)
+        while self._url_combo.count() > 7:
+            self._url_combo.removeItem(self._url_combo.count() - 1)
 
         # Build URL with authentication if provided
         user = self._user_edit.text().strip() if self._user_edit else ""
@@ -412,8 +429,8 @@ class RTSPTab(QWidget):
         Args:
             enabled: True to enable, False to disable.
         """
-        if self._url_edit:
-            self._url_edit.setEnabled(enabled)
+        if self._url_combo:
+            self._url_combo.setEnabled(enabled)
         if self._user_edit:
             self._user_edit.setEnabled(enabled)
         if self._pass_edit:

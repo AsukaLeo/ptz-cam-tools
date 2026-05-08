@@ -74,7 +74,32 @@ class PreviewWidget(QFrame):
         self._video_layout.addWidget(self.video_label)
         
         self._layout.addWidget(self.video_frame)
-    
+
+        # Overlay label (for status warnings like NDI license timeout)
+        self.overlay_label = QLabel()
+        self.overlay_label.setAlignment(Qt.AlignCenter)
+        self.overlay_label.setWordWrap(True)
+        self.overlay_label.setStyleSheet(
+            "color: #fff; font-size: 16px; font-weight: 600;"
+            "background: rgba(0, 0, 0, 160); border-radius: 8px;"
+            "padding: 16px 24px;"
+        )
+        self.overlay_label.hide()
+        self._layout.addWidget(self.overlay_label)
+        self._layout.setAlignment(self.overlay_label, Qt.AlignCenter)
+
+    def show_overlay(self, text: str) -> None:
+        """Show an overlay message on top of the video area.
+
+        Args:
+            text: Message text to display.
+        """
+        self.overlay_label.setText(text)
+        self.overlay_label.show()
+
+    def hide_overlay(self) -> None:
+        """Hide the overlay message."""
+        self.overlay_label.hide()
     def set_video_frame(self, pixmap) -> None:
         """Display video frame.
         

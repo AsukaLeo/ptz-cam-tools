@@ -86,6 +86,15 @@ class PTZPanel(QFrame):
             controller: ViscaController instance.
         """
         self._controller = controller
+        self.setEnabled(False)  # Start disabled
+
+    def set_connected(self, connected: bool) -> None:
+        """Enable/disable all PTZ controls based on VISCA connection state.
+
+        Args:
+            connected: True if connected, False if disconnected.
+        """
+        self.setEnabled(connected)
 
     # ------------------------------------------------------------------
     # D-pad

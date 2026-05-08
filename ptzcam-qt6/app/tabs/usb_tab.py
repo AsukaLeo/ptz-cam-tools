@@ -94,9 +94,9 @@ class USBTab(QWidget):
         """Create help card with usage instructions."""
         return HelpCard("USB 使用说明", [
             "1. 下拉选择 USB 摄像头设备",
-            "2. 选择分辨率、格式和帧率",
-            "3. 点击「播放」开始预览",
-            "4. 点击「停止」结束预览",
+            "2. 点击「播放」开始预览",
+            "3. 点击「停止」结束预览",
+            "4. 可切换分辨率、格式和帧率",
             "5. 点「刷新」重新检测设备",
         ])
 
