@@ -15,6 +15,34 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.36.511 — 修复中文文本编码（Runtime Hook）
+
+**Commit**: `34bf09c` · **Branch**: `layout-v2` · **日期**: 2026-05-11
+
+### 背景
+V 0.35.511 虽然添加了源码 UTF-8 声明和 `.gitattributes`，字节码验证也通过了，但 **PyInstaller 冻结后在 Windows 系统因 GBK/cp936 locale，运行时 Python 默认使用系统 locale 编码**，导致中文 UI 文本再次乱码。
+
+### 修复
+- **新增 `runtime_hook_utf8.py`** — PyInstaller runtime hook，强制 frozen app 使用 UTF-8 mode
+  - `sys.stdin/stdout/stderr.reconfigure(encoding='utf-8')`
+  - 设置 `PYTHONUTF8=1` / `PYTHONIOENCODING=utf-8`
+- **构建命令**: `PYTHONUTF8=1 python -m PyInstaller --runtime-hook runtime_hook_utf8.py ...`
+- 清除所有缓存重新编译
+
+### 修改文件
+```
+runtime_hook_utf8.py     |  20  新增（UTF-8 运行时强制）
+main.py                  |   1  添加 UTF-8 声明
+app/utils/constants.py   |   2  版本号 V 0.36.511
+```
+
+### 踩坑记录
+- PyInstaller 的 PYZ 是 ZlibArchive 格式，不是标准 zip（`zipfile` 打不开）
+- `ZlibArchiveReader.extract()` 返回 code 对象，不是 bytes
+- Windows locale `cp936` 会覆盖源码 UTF-8 声明
+
+---
+
 ## V 0.35.511 — 修复中文编码乱码
 
 **Commit**: `24f62b0` · **Branch**: `layout-v2` · **日期**: 2026-05-11
