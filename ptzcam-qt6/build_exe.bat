@@ -44,19 +44,9 @@ REM Resolve ONVIF WSDL directory (onvif-zeep installs WSDL to site-packages/wsdl
 python -c "import onvif; import os; print(os.path.join(os.path.dirname(os.path.dirname(onvif.__file__)), 'wsdl'))" > "%TEMP%\wsdl_path.txt"
 set /p WSDL_DIR=<"%TEMP%\wsdl_path.txt"
 
-REM Prepare minimal FFmpeg DLLs (only core 4 needed for decode)
-set FFMPEG_SRC=%SCRIPT_DIR%thirdparty\ffmpeg\bin
-set FFMPEG_TMP=%TEMP%\ffmpeg_minimal
-if exist "%FFMPEG_TMP%" rmdir /s /q "%FFMPEG_TMP%"
-mkdir "%FFMPEG_TMP%"
-copy "%FFMPEG_SRC%\avcodec-61.dll" "%FFMPEG_TMP%\" >nul
-copy "%FFMPEG_SRC%\avformat-61.dll" "%FFMPEG_TMP%\" >nul
-copy "%FFMPEG_SRC%\avutil-59.dll" "%FFMPEG_TMP%\" >nul
-copy "%FFMPEG_SRC%\swscale-8.dll" "%FFMPEG_TMP%\" >nul
-
 echo [INFO] Building PTZ-Cam-Tools.exe...
 echo [INFO] WSDL dir: %WSDL_DIR%
-echo [INFO] FFmpeg: core 4 DLLs only (~87MB vs 119MB full)
+echo [INFO] QMediaPlayer uses built-in FFmpeg, no thirdparty DLLs needed
 echo [INFO] This may take a few minutes...
 
 python -m PyInstaller --onefile --windowed ^
@@ -66,7 +56,6 @@ python -m PyInstaller --onefile --windowed ^
     %UPX_FLAG% ^
     --add-data "assets;assets" ^
     --add-data "arrow_down.svg;." ^
-    --add-data "%FFMPEG_TMP%;thirdparty/ffmpeg/bin" ^
     --add-data "%WSDL_DIR%;wsdl" ^
     --exclude-module "matplotlib" ^
     --exclude-module "PIL" ^
@@ -132,13 +121,9 @@ python -m PyInstaller --onefile --windowed ^
 if errorlevel 1 (
     echo.
     echo [ERROR] Build failed!
-    rmdir /s /q "%FFMPEG_TMP%" 2>nul
     pause
     exit /b 1
 )
-
-REM Cleanup temp FFmpeg
-rmdir /s /q "%FFMPEG_TMP%" 2>nul
 
 REM Get version for renaming
 python -c "from app.utils.constants import VERSION_STRING; print(VERSION_STRING.replace(' ',''))" > "%TEMP%\ver.txt"
