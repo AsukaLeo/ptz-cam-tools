@@ -1,8 +1,8 @@
 # PTZ-Cam-Tools
 
 > 会议摄像机 / 全向麦克风 多功能控制工具  
-> V 0.36.511 — 彻底修复中文编码乱码（Runtime Hook）  
-> **37 次迭代 · 25 个 Release**
+> V 0.34.511_14288d9 — EXE 体积优化至 56MB + 浅色模式图标暗底适配  
+> **10 个 Release**
 
 ---
 
@@ -45,7 +45,7 @@
 | 串口通信 | pyserial |
 | 网络 | onvif-zeep, WS-Discovery |
 | NDI | NDI SDK v6（ctypes） |
-| 打包 | PyInstaller（单文件 55MB） |
+| 打包 | PyInstaller（单文件 56MB，UPX + spec binary filter） |
 
 ---
 
@@ -53,9 +53,8 @@
 
 | 版本 | 日期 | 里程碑 |
 |------|------|--------|
-| V 0.36.511 | 5/11 | 彻底修复中文编码乱码 — Runtime Hook + UTF-8 强制 |
-| V 0.35.511 | 5/11 | 修复中文编码乱码 — UTF-8 声明 + .gitattributes |
-| V 0.34.511 | 5/11 | 自适应深色/浅色模式 logo + 图标文件管理 |
+| V 0.34.511 | 5/11 | EXE 体积优化 180→56MB + 浅色模式任务栏图标暗底适配 |
+| V 0.34.511 | 5/11 | 自适应深色/浅色模式 logo + Win32 任务栏图标分离 |
 | V 0.33.508 | 5/11 | Layout V2 + AF 聚焦 + 3 项 Bug 修复 |
 | V 0.33.508 | 5/8 | VISCA 串口数据监控 + DebugOverlay 控件命名 |
 | V 0.32.508 | 5/8 | 技术债务清零 + 残留文件清理 |

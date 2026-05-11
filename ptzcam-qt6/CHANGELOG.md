@@ -15,6 +15,40 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.34.511_14288d9 — EXE 体积优化 + 浅色模式任务栏图标暗底适配
+
+**Commit**: `14288d9` → `4a5d40c` · **Branch**: `layout-v2` · **日期**: 2026-05-11
+
+### EXE 体积优化（180MB → 56MB，-69%）
+- **Spec binary filter**: PyInstaller `.spec` 中过滤 `a.binaries`，移除 Qt6Quick/Qml/OpenGL/Pdf/VirtualKeyboard 等非必要 C++ DLL
+- **移除 thirdparty FFmpeg**: QMediaPlayer 已内置 `ffmpegmediaplugin.dll`，独立 FFmpeg DLL 纯重复
+- **UPX 压缩集成**: `build_exe.bat` 自动 PATH 注入 UPX，插件 DLL 禁用（CFG 保护）
+- **关键教训**: Windows 路径分隔符必须用 `\\`（`PySide6\\`），不能用 `/`，否则 `startswith()` 匹配不到任何文件
+
+### 浅色模式任务栏图标暗底适配
+- **问题**: 浅色模式下 `app_light.ico` 在白色任务栏上线条不清晰
+- **方案**: Win32 API `SendMessage(hwnd, WM_SETICON, ICON_BIG, hicon)` 单独设任务栏大图标
+  - 标题栏（ICON_SMALL）: 保持 `app_light.ico` — `QApplication.setWindowIcon()`
+  - 任务栏（ICON_BIG）: 覆盖为 `app_light_with_dark_bg.ico` — Win32 API
+- **修改**: `main.py` 新增 `_override_taskbar_icon()` / `_apply_taskbar_icon_for_scheme()`
+- **资源**: 新增 `assets/app_light_with_dark_bg.ico` + 源文件 `assets/app_ico_light_with_dark_bg.png`
+
+### 修改文件（6 files, +118/-84）
+```
+main.py                            | +58  Win32 任务栏图标分离
+PTZ-Cam-Tools.spec                 | +35  binary filter 裁减非必要 DLL
+build_exe.bat                      | +18  UPX PATH 注入 + spec 模式
+assets/app_light_with_dark_bg.ico  | 新增  暗底任务栏图标
+assets/app_ico_light_with_dark_bg.png | 新增 图标源文件
+app/utils/constants.py             |  +1  版本号更新 → 14288d9
+```
+
+### 编译产物
+- `PTZ-Cam-Tools-V0.34.511_14288d9-By-Asuka.exe` (56MB)
+- Gitea Release #25
+
+---
+
 ## V 0.34.511 — 自适应系统深色/浅色模式 Logo
 
 **Commit**: `ac873ce` · **Branch**: `layout-v2` · **日期**: 2026-05-11
