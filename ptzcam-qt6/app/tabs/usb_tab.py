@@ -332,7 +332,7 @@ class USBTab(QWidget):
     
     def _toggle_playback(self) -> None:
         """Toggle video playback."""
-        if self.play_btn.text() == "播放":
+        if not self._is_playing:
             self._start_playback()
         else:
             self._stop_playback()
@@ -409,7 +409,7 @@ class USBTab(QWidget):
     def _stop_playback(self) -> None:
         """Stop video playback."""
         # Prevent multiple calls
-        if self.play_btn.text() == "播放":
+        if not self._is_playing:
             return
         
         self._logger.info("Stopping playback")
@@ -545,7 +545,7 @@ class USBTab(QWidget):
         """
         self._logger.debug(f"Capture state: {state}")
         # Only update UI if state changed externally
-        if state == 'stopped' and self.play_btn.text() == "停止":
+        if state == 'stopped' and self._is_playing:
             # Playback stopped externally, update UI only
             self._update_ui_stopped()
     

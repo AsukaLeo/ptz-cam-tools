@@ -2,9 +2,10 @@
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QLabel, QPushButton, QSlider, QWidget
+    QLabel, QLineEdit, QPushButton, QSlider, QSpinBox, QWidget
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIntValidator
 from typing import Optional, Callable
 
 from app.styles.theme import get_ptz_panel_style
@@ -107,6 +108,10 @@ class PTZPanel(QFrame):
             child.setEnabled(connected)
         for child in self.findChildren(QSlider):
             child.setEnabled(connected)
+        for child in self.findChildren(QSpinBox):
+            child.setEnabled(connected)
+        for child in self.findChildren(QLineEdit):
+            child.setEnabled(connected)
 
     # ------------------------------------------------------------------
     # D-pad
@@ -176,10 +181,10 @@ class PTZPanel(QFrame):
             QVBoxLayout with zoom/focus buttons.
         """
         zf = QVBoxLayout()
-        zf.setSpacing(8)
+        zf.setSpacing(4)
 
         zr = QHBoxLayout()
-        zr.setSpacing(8)
+        zr.setSpacing(4)
         zr.addWidget(self._create_press_btn(tr("变焦+"), lambda: self._do_zoom(1),
                                             lambda: self._do_zoom(0)))
         zr.addWidget(self._create_press_btn(tr("聚焦+"), lambda: self._do_focus(3),
@@ -187,12 +192,19 @@ class PTZPanel(QFrame):
         zf.addLayout(zr)
 
         fr = QHBoxLayout()
-        fr.setSpacing(8)
+        fr.setSpacing(4)
         fr.addWidget(self._create_press_btn(tr("变焦-"), lambda: self._do_zoom(-1),
                                             lambda: self._do_zoom(0)))
         fr.addWidget(self._create_press_btn(tr("聚焦-"), lambda: self._do_focus(-3),
                                             lambda: self._do_focus(0)))
         zf.addLayout(fr)
+
+        # Auto / Manual focus mode buttons  
+        af_row = QHBoxLayout()
+        af_row.setSpacing(4)
+        af_row.addWidget(self._create_click_btn(tr("自动聚焦"), self._do_auto_focus))
+        af_row.addWidget(self._create_click_btn(tr("手动聚焦"), self._do_manual_focus_mode))
+        zf.addLayout(af_row)
 
         return zf
 
@@ -201,10 +213,14 @@ class PTZPanel(QFrame):
     # ------------------------------------------------------------------
 
     def _create_preset_controls(self) -> QVBoxLayout:
-        """Create preset management buttons (0-9 + 设置/清除/调用).
+        """Create preset management (0-9 numbers + manual address input).
+
+        Numbers are compact and right-aligned. To the right of the
+        number grid is a manual address input (0-254) with range label
+        above. Manual address and 0-9 grid are mutually exclusive.
 
         Returns:
-            QVBoxLayout with preset buttons.
+            QVBoxLayout with preset buttons and address input.
         """
         outer = QVBoxLayout()
         outer.setSpacing(6)
@@ -215,16 +231,48 @@ class PTZPanel(QFrame):
         )
         outer.addWidget(label)
 
-        # 0-9 number grid (2 rows × 5 cols)
+        # Row: compact number grid + manual address input
+        preset_row = QHBoxLayout()
+        preset_row.setSpacing(8)
+
+        # 0-9 number grid (2 rows × 5 cols, tight)
         grid = QGridLayout()
-        grid.setSpacing(2)
+        grid.setSpacing(1)
         self._preset_btns: list[QPushButton] = []
         for i in range(10):
             btn = self._create_preset_num_btn(str(i))
             btn.clicked.connect(lambda checked, p=i: self._select_preset(p))
             self._preset_btns.append(btn)
             grid.addWidget(btn, i // 5, i % 5)
-        outer.addLayout(grid)
+        preset_row.addLayout(grid)
+        preset_row.addStretch()
+
+        # Manual address input (empty by default, range 0-254)
+        addr_group = QVBoxLayout()
+        addr_group.setSpacing(2)
+
+        range_label = QLabel("0 ~ 254")
+        range_label.setStyleSheet(
+            "font-size: 9px; color: #999; background: transparent;"
+        )
+        addr_group.addWidget(range_label)
+
+        self._addr_input = QLineEdit()
+        self._addr_input.setFixedWidth(54)
+        self._addr_input.setPlaceholderText("")
+        self._addr_input.setValidator(QIntValidator(0, 254))
+        self._addr_input.setStyleSheet("""
+            QLineEdit {
+                font-size: 11px; padding: 1px 4px;
+                border: 1px solid #aaa; border-radius: 3px;
+                background: #fff; color: #333;
+            }
+        """)
+        self._addr_input.textChanged.connect(self._on_manual_addr_changed)
+        addr_group.addWidget(self._addr_input)
+
+        preset_row.addLayout(addr_group)
+        outer.addLayout(preset_row)
 
         # Action buttons row
         action_row = QHBoxLayout()
@@ -265,7 +313,6 @@ class PTZPanel(QFrame):
             QPushButton:checked { background: #c8e6c9; border-color: #4caf50; }
         """)
         btn.setCheckable(True)
-        btn.setAutoExclusive(True)
         return btn
 
     def _create_preset_action_btn(self, text: str) -> QPushButton:
@@ -300,34 +347,91 @@ class PTZPanel(QFrame):
     def _select_preset(self, preset_id: int) -> None:
         """Select a preset number and update button highlight.
 
+        Also clears the manual address input (mutual exclusion).
+
         Args:
             preset_id: Preset number (0-9).
         """
         self._selected_preset_id = preset_id
         for i, btn in enumerate(self._preset_btns):
             btn.setChecked(i == preset_id)
+        # Clear manual address (block signals to avoid triggering
+        # _on_manual_addr_changed which would re-clear the grid)
+        self._addr_input.blockSignals(True)
+        self._addr_input.clear()
+        self._addr_input.blockSignals(False)
+
+    def _manual_addr_value(self) -> int:
+        """Get the manual address input value.
+
+        Returns:
+            Address value (0-254), or -1 if empty/invalid.
+        """
+        text = self._addr_input.text().strip()
+        if not text:
+            return -1
+        try:
+            val = int(text)
+            if 0 <= val <= 254:
+                return val
+        except ValueError:
+            pass
+        return -1
+
+    def _on_manual_addr_changed(self, text: str) -> None:
+        """Clear 0-9 preset selection when manual address is entered.
+
+        Ensures mutual exclusion: typing a manual address deselects
+        the number grid.
+
+        Args:
+            text: Current text in the address input.
+        """
+        text = text.strip()
+        if text:
+            try:
+                val = int(text)
+                if 0 <= val <= 254:
+                    self._selected_preset_id = -1
+                    for btn in self._preset_btns:
+                        btn.setChecked(False)
+            except ValueError:
+                pass
+
+    def _get_preset_target(self) -> int:
+        """Get the target preset number.
+
+        Prefers manual address input over 0-9 grid selection.
+
+        Returns:
+            Preset number (0-255), or -1 if nothing selected.
+        """
+        manual = self._manual_addr_value()
+        if manual >= 0:
+            return manual
+        return self._selected_preset_id
 
     def _on_set_preset(self) -> None:
-        """Save current position to selected preset."""
-        preset = self._selected_preset()
+        """Save current position to selected preset or manual address."""
+        preset = self._get_preset_target()
         if preset < 0:
-            self._notify_status("请先选择一个预置位编号")
+            self._notify_status("请先选择一个预置位编号或输入地址")
             return
         self._set_preset(preset)
 
     def _on_clear_preset(self) -> None:
-        """Clear selected preset."""
-        preset = self._selected_preset()
+        """Clear selected preset or manual address."""
+        preset = self._get_preset_target()
         if preset < 0:
-            self._notify_status("请先选择一个预置位编号")
+            self._notify_status("请先选择一个预置位编号或输入地址")
             return
         self._clear_preset(preset)
 
     def _on_recall_preset(self) -> None:
-        """Recall selected preset."""
-        preset = self._selected_preset()
+        """Recall selected preset or manual address."""
+        preset = self._get_preset_target()
         if preset < 0:
-            self._notify_status("请先选择一个预置位编号")
+            self._notify_status("请先选择一个预置位编号或输入地址")
             return
         self._recall_preset(preset)
 
@@ -354,12 +458,14 @@ class PTZPanel(QFrame):
             self._notify_status("VISCA 未连接")
 
     def _recall_preset(self, preset_id: int) -> None:
-        """Recall preset and update selection.
+        """Recall preset and optionally update selection.
 
         Args:
-            preset_id: Preset number (0-9).
+            preset_id: Preset number (0-255).
         """
-        self._select_preset(preset_id)
+        # Only update grid selection for 0-9 presets
+        if 0 <= preset_id <= 9:
+            self._select_preset(preset_id)
         if self._controller and self._controller.is_connected:
             self._controller.preset_recall(preset_id)
         else:
@@ -508,6 +614,30 @@ class PTZPanel(QFrame):
         btn.released.connect(on_release)
         return btn
 
+    def _create_click_btn(self, text: str,
+                          on_click: Callable) -> QPushButton:
+        """Create a simple click button (for one-shot actions).
+
+        Args:
+            text: Button text.
+            on_click: Click callback.
+
+        Returns:
+            Configured QPushButton.
+        """
+        btn = QPushButton(text)
+        btn.setFixedWidth(64)
+        btn.setStyleSheet("""
+            QPushButton {
+                font-size: 11px; padding: 2px 4px; border: 1px solid #aaa;
+                border-radius: 6px; background: #f5f5f5; color: #333;
+            }
+            QPushButton:hover { background: #e5e5e5; }
+            QPushButton:pressed { background: #d0d0d0; }
+        """)
+        btn.clicked.connect(on_click)
+        return btn
+
     # ------------------------------------------------------------------
     # VISCA command dispatch
     # ------------------------------------------------------------------
@@ -571,6 +701,21 @@ class PTZPanel(QFrame):
         """
         if self._controller and self._controller.is_connected:
             self._controller.focus(speed)
+        else:
+            self._notify_status("VISCA 未连接")
+
+    def _do_auto_focus(self) -> None:
+        """Enable continuous Auto Focus mode."""
+        if self._controller and self._controller.is_connected:
+            self._controller.set_focus_mode(auto=True)
+            self._notify_status("自动聚焦已开启")
+        else:
+            self._notify_status("VISCA 未连接")
+
+    def _do_manual_focus_mode(self) -> None:
+        """Switch to manual focus mode."""
+        if self._controller and self._controller.is_connected:
+            self._controller.set_focus_mode(auto=False)
         else:
             self._notify_status("VISCA 未连接")
 

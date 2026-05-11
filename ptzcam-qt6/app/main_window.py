@@ -47,6 +47,8 @@ class MainWindow(QMainWindow):
         self._tab_widgets: dict[str, QWidget] = {}
         # Track which tab is currently active
         self._active_tab_name: str = TAB_USB
+        # Raw status text (without prefix) for language switch re-render
+        self._raw_status: str = "就绪"
         
         # Set window constraints
         self.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
@@ -247,8 +249,8 @@ class MainWindow(QMainWindow):
         # Layout panels vertically on the right side
         side_layout = QVBoxLayout()
         side_layout.setSpacing(6)
-        side_layout.addWidget(self._ptz_panel, 4)
-        side_layout.addWidget(self._visca_panel, 3)
+        side_layout.addWidget(self._ptz_panel)
+        side_layout.addWidget(self._visca_panel, 1)
 
         # Wrap in a fixed-width container
         side_container = QWidget()
@@ -354,7 +356,7 @@ class MainWindow(QMainWindow):
                 tab.refresh_language()
 
         # Refresh status bar
-        self.update_status(tr(self.status_label.text().replace("状态: ", "").replace("Status: ", "")))
+        self.status_label.setText(f"{tr('状态')}: {tr(self._raw_status)}")
 
         self._logger.info(f"Language: {lang}")
 
@@ -405,7 +407,8 @@ class MainWindow(QMainWindow):
             text: Status text to display.
         """
         self._logger.debug(f"Status updated: {text}")
-        self.status_label.setText(f"状态: {text}")
+        self._raw_status = text
+        self.status_label.setText(f"{tr('状态')}: {text}")
     
     def update_video_info(self, width: int, height: int,
                           format_name: str, fps: float,

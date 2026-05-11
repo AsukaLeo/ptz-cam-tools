@@ -49,7 +49,6 @@ class VISCAPanel(QFrame):
         """
         super().__init__(parent)
         self.setObjectName("viscaPanel")
-        self.setMinimumHeight(220)
         self.setStyleSheet(get_visca_panel_style())
 
         self.on_status_update: Optional[Callable[[str], None]] = None
@@ -59,6 +58,10 @@ class VISCAPanel(QFrame):
         # Serial connect state
         self._serial_pending = False
         self._serial_timeout_timer: Optional[QTimer] = None
+
+        # Connection state flags (avoid text comparison for i18n safety)
+        self._serial_is_connected = False
+        self._network_is_connected = False
 
         self._setup_ui()
 
@@ -82,7 +85,7 @@ class VISCAPanel(QFrame):
         # Tab widget for Serial/Network
         visca_tab = QTabWidget()
         visca_tab.setStyleSheet(get_visca_tab_style())
-        visca_tab.setMinimumHeight(200)
+        visca_tab.setMinimumHeight(160)
 
         # Serial tab
         visca_tab.addTab(self._create_serial_tab(), "串口")
@@ -107,6 +110,11 @@ class VISCAPanel(QFrame):
         # Sync default button state to controller
         if hasattr(self, '_tilt_reverse_btn'):
             controller.tilt_reverse = self._tilt_reverse_btn.isChecked()
+        # Sync serial reverse button initial state
+        if hasattr(self, '_serial_reverse_btn') and hasattr(self, '_tilt_reverse_btn'):
+            self._serial_reverse_btn.blockSignals(True)
+            self._serial_reverse_btn.setChecked(self._tilt_reverse_btn.isChecked())
+            self._serial_reverse_btn.blockSignals(False)
 
     def _populate_serial_ports(self) -> None:
         """Populate serial port combo with available ports in ascending order.
@@ -144,6 +152,48 @@ class VISCAPanel(QFrame):
         for p in ports:
             self._serial_port.addItem(p)
 
+    def _on_serial_refresh(self) -> None:
+        """Refresh serial port list (retains current selection if still available)."""
+        current = self._serial_port.currentText()
+        self._populate_serial_ports()
+        idx = self._serial_port.findText(current)
+        if idx >= 0:
+            self._serial_port.setCurrentIndex(idx)
+        self._serial_status.setText("串口列表已刷新")
+        self._serial_status.setStyleSheet(
+            "color: #2e7d32; font-size: 11px; background: transparent; padding: 2px 0;"
+        )
+        # Auto-clear status after 3s
+        def _clear_status():
+            if self._serial_status.text() == "串口列表已刷新":
+                self._serial_status.setText("")
+                self._serial_status.setStyleSheet(
+                    "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
+                )
+        QTimer.singleShot(3000, _clear_status)
+
+    def _on_serial_reverse_changed(self, checked: bool) -> None:
+        """Sync direction reverse state with network tab and controller.
+
+        Args:
+            checked: True if reverse is active.
+        """
+        self._serial_reverse_btn.setText("方向反转 \u2714" if checked else "方向反转")
+        self._serial_reverse_btn.setChecked(checked)
+        # Sync network tab button (block signals to avoid ping-pong)
+        if hasattr(self, '_tilt_reverse_btn') and self._tilt_reverse_btn.isChecked() != checked:
+            self._tilt_reverse_btn.blockSignals(True)
+            self._tilt_reverse_btn.setChecked(checked)
+            self._tilt_reverse_btn.setText("方向反转 \u2714" if checked else "方向反转")
+            self._tilt_reverse_btn.blockSignals(False)
+        if self._controller:
+            self._controller.tilt_reverse = checked
+            msg = "方向反转（非标相机使用）" if checked else "方向恢复正常（标准Sony VISCA）"
+            self._serial_status.setText(msg)
+            self._serial_status.setStyleSheet(
+                "color: #e65100; font-size: 11px; background: transparent; padding: 2px 0;"
+            )
+
     def _create_serial_tab(self) -> QWidget:
         """Create the serial port configuration tab.
 
@@ -177,29 +227,62 @@ class VISCAPanel(QFrame):
         grid.addWidget(QLabel("校验位:"), 1, 2)
         grid.addWidget(self._serial_parity, 1, 3)
 
-        # Row 2: Stop bits | Connect button
+        # Row 2: Stop bits | Refresh | Connect
         self._serial_stop = QComboBox()
         self._serial_stop.addItems(STOP_BITS)
         grid.addWidget(QLabel("停止位:"), 2, 0)
         grid.addWidget(self._serial_stop, 2, 1)
 
+        self._serial_refresh_btn = QPushButton("刷新")
+        self._serial_refresh_btn.setToolTip("重新扫描可用串口设备")
+        self._serial_refresh_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 11px; background: #fff; color: #555;
+                border: 1px solid #bbb; border-radius: 3px;
+                padding: 3px 10px;
+            }
+            QPushButton:hover { background: #e3f2fd; border-color: #1976d2; }
+        """)
+        self._serial_refresh_btn.clicked.connect(self._on_serial_refresh)
+        grid.addWidget(self._serial_refresh_btn, 2, 2, Qt.AlignCenter)
+
         self._serial_connect_btn = QPushButton("连接")
         self._serial_connect_btn.setStyleSheet(get_visca_connect_button_style())
         self._serial_connect_btn.clicked.connect(self._toggle_serial)
-        grid.addWidget(self._serial_connect_btn, 2, 2, 1, 2, Qt.AlignCenter)
+        grid.addWidget(self._serial_connect_btn, 2, 3, Qt.AlignCenter)
 
-        # Row 3: Status
+        # Row 3: Direction reverse (shared state with network tab)
+        self._serial_reverse_btn = QPushButton("方向反转 \u2714")
+        self._serial_reverse_btn.setCheckable(True)
+        self._serial_reverse_btn.setChecked(True)
+        self._serial_reverse_btn.setToolTip("部分 VISCA 协议上下方向相反时取消勾选")
+        self._serial_reverse_btn.setStyleSheet("""
+            QPushButton {
+                font-size: 10px; background: #fff;
+                border: 1px solid #aaa; border-radius: 3px;
+                padding: 2px 6px; text-align: left; color: #333;
+            }
+            QPushButton:checked {
+                border-color: #1976d2; color: #1976d2; font-weight: bold;
+            }
+            QPushButton:!checked { color: #888; }
+            QPushButton:hover { background: #f5f5f5; }
+        """)
+        self._serial_reverse_btn.toggled.connect(self._on_serial_reverse_changed)
+        grid.addWidget(self._serial_reverse_btn, 3, 0, 1, 2)
+
+        # Row 3 (cont): Status
         self._serial_status = QLabel("")
         self._serial_status.setStyleSheet(
             "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
         )
-        grid.addWidget(self._serial_status, 3, 0, 1, 4)
+        grid.addWidget(self._serial_status, 3, 2, 1, 2)
 
         # Serial data monitor (shared with network tab)
         from PySide6.QtWidgets import QTextEdit
         self._serial_monitor_serial = QTextEdit()
         self._serial_monitor_serial.setReadOnly(True)
-        self._serial_monitor_serial.setFixedHeight(60)
+        self._serial_monitor_serial.setMinimumHeight(40)
         self._serial_monitor_serial.setStyleSheet(
             "QTextEdit {"
             "  color: #555; font-size: 10px; font-family: Consolas, monospace;"
@@ -209,9 +292,19 @@ class VISCAPanel(QFrame):
         )
         self._serial_monitor_serial.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._serial_monitor_serial.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self._serial_monitor_serial.setMinimumHeight(40)
-        grid.addWidget(self._serial_monitor_serial, 4, 0, 1, 4)
-        grid.setRowStretch(4, 1)
+        grid.addWidget(self._serial_monitor_serial, 5, 0, 1, 4)
+        grid.setRowStretch(5, 1)
+
+        # Adjust combo widths to fit content
+        for cb in [self._serial_port, self._serial_baud, self._serial_data,
+                   self._serial_parity, self._serial_stop]:
+            cb.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+
+        # Give combo/button columns more weight than label columns
+        grid.setColumnStretch(0, 0)
+        grid.setColumnStretch(1, 2)
+        grid.setColumnStretch(2, 0)
+        grid.setColumnStretch(3, 2)
 
         return page
 
@@ -226,9 +319,11 @@ class VISCAPanel(QFrame):
         grid.setContentsMargins(8, 8, 8, 8)
         grid.setSpacing(6)
 
-        # Row 0: Address
+        # Row 0: Address (empty by default)
         grid.addWidget(QLabel("地址:"), 0, 0)
-        self._net_addr = QLineEdit("192.168.50.254")
+        self._net_addr = QLineEdit("")
+        self._net_addr.setPlaceholderText("192.168.50.254")
+        self._net_addr.setMinimumWidth(310)
         grid.addWidget(self._net_addr, 0, 1, 1, 3)
 
         # Row 1: Protocol | Port
@@ -243,7 +338,7 @@ class VISCAPanel(QFrame):
         self._net_port.setFixedWidth(60)
         grid.addWidget(self._net_port, 1, 3)
 
-        # Row 2: Direction reverse
+        # Row 2: Direction reverse | Connect | Status
         self._tilt_reverse_btn = QPushButton("方向反转 \u2714")
         self._tilt_reverse_btn.setCheckable(True)
         self._tilt_reverse_btn.setChecked(True)
@@ -261,21 +356,20 @@ class VISCAPanel(QFrame):
             QPushButton:hover { background: #f5f5f5; }
         """)
         self._tilt_reverse_btn.toggled.connect(self._on_tilt_reverse_changed)
-        grid.addWidget(self._tilt_reverse_btn, 2, 0, 1, 2)
+        grid.addWidget(self._tilt_reverse_btn, 2, 0)
 
-        # Row 3: Connect button + Status
         self._net_connect_btn = QPushButton("连接")
         self._net_connect_btn.setStyleSheet(get_visca_connect_button_style())
         self._net_connect_btn.clicked.connect(self._toggle_network)
-        grid.addWidget(self._net_connect_btn, 3, 0)
+        grid.addWidget(self._net_connect_btn, 2, 1)
 
         self._net_status = QLabel("")
         self._net_status.setStyleSheet(
             "color: #888; font-size: 11px; background: transparent; padding: 2px 0;"
         )
-        grid.addWidget(self._net_status, 3, 1, 1, 3)
+        grid.addWidget(self._net_status, 2, 2, 1, 2)
 
-        # Row 4: Serial monitor (fills remaining height)
+        # Row 3: Serial monitor (fills remaining height)
         from PySide6.QtWidgets import QTextEdit
         self._serial_monitor = QTextEdit()
         self._serial_monitor.setReadOnly(True)
@@ -289,10 +383,15 @@ class VISCAPanel(QFrame):
         )
         self._serial_monitor.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._serial_monitor.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        grid.addWidget(self._serial_monitor, 4, 0, 1, 4)
-        grid.setRowStretch(4, 1)
+        grid.addWidget(self._serial_monitor, 3, 0, 1, 4)
+        grid.setRowStretch(3, 1)
 
-        grid.setColumnStretch(4, 1)
+        # Column stretch: give combo/input columns more room
+        grid.setColumnStretch(0, 0)
+        grid.setColumnStretch(1, 2)
+        grid.setColumnStretch(2, 0)
+        grid.setColumnStretch(3, 1)
+
         return page
 
     # ------------------------------------------------------------------
@@ -342,7 +441,8 @@ class VISCAPanel(QFrame):
             enabled: True to enable, False to disable.
         """
         for w in [self._serial_port, self._serial_baud,
-                  self._serial_data, self._serial_parity, self._serial_stop]:
+                  self._serial_data, self._serial_parity, self._serial_stop,
+                  self._serial_refresh_btn]:
             w.setEnabled(enabled)
 
     def _set_serial_connected(self, connected: bool) -> None:
@@ -351,6 +451,7 @@ class VISCAPanel(QFrame):
         Args:
             connected: True if connected, False if disconnected.
         """
+        self._serial_is_connected = connected
         btn = self._serial_connect_btn
         if connected:
             btn.setText(tr("断开"))
@@ -378,6 +479,7 @@ class VISCAPanel(QFrame):
         Args:
             connected: True if connected, False if disconnected.
         """
+        self._network_is_connected = connected
         btn = self._net_connect_btn
         if connected:
             btn.setText(tr("断开"))
@@ -411,7 +513,7 @@ class VISCAPanel(QFrame):
             self._notify_status("控制器未初始化")
             return
 
-        if self._serial_connect_btn.text() == "断开":
+        if self._serial_is_connected:
             self._disconnect()
             return
 
@@ -526,12 +628,14 @@ class VISCAPanel(QFrame):
             return
 
         # If currently connected, disconnect
-        if self._net_connect_btn.text() == "断开":
+        if self._network_is_connected:
             self._disconnect()
             return
 
         proto = self._net_proto.currentText() if hasattr(self, '_net_proto') else "TCP"
-        host = self._net_addr.text().strip() if hasattr(self, '_net_addr') else "192.168.50.254"
+        host = self._net_addr.text().strip() if hasattr(self, '_net_addr') else ""
+        if not host:
+            host = "192.168.50.254"
         port_str = self._net_port.text().strip() if hasattr(self, '_net_port') else "5678"
 
         try:
@@ -568,6 +672,12 @@ class VISCAPanel(QFrame):
         """
         self._tilt_reverse_btn.setText("方向反转 \u2714" if checked else "方向反转")
         self._tilt_reverse_btn.setChecked(checked)
+        # Sync serial tab button (block signals to avoid ping-pong)
+        if hasattr(self, '_serial_reverse_btn') and self._serial_reverse_btn.isChecked() != checked:
+            self._serial_reverse_btn.blockSignals(True)
+            self._serial_reverse_btn.setChecked(checked)
+            self._serial_reverse_btn.setText("方向反转 \u2714" if checked else "方向反转")
+            self._serial_reverse_btn.blockSignals(False)
         if self._controller:
             self._controller.tilt_reverse = checked
             msg = "方向反转（非标相机使用）" if checked else "方向恢复正常（标准Sony VISCA）"
@@ -589,10 +699,12 @@ class VISCAPanel(QFrame):
         """Update all UI text for current language."""
         from app.utils.i18n import refresh_widget
         refresh_widget(self)
-        # Update direction reverse button text
-        if hasattr(self, '_tilt_reverse_btn'):
-            checked = self._tilt_reverse_btn.isChecked()
-            self._tilt_reverse_btn.setText(tr("方向反转 \u2714") if checked else tr("方向反转"))
+        # Update direction reverse button texts
+        for attr in ['_tilt_reverse_btn', '_serial_reverse_btn']:
+            btn = getattr(self, attr, None)
+            if btn:
+                checked = btn.isChecked()
+                btn.setText(tr("方向反转 \u2714") if checked else tr("方向反转"))
 
     def set_connection_callback(self, callback: Callable[[bool], None]) -> None:
         """Set callback for VISCA connection state changes (True=connected)."""

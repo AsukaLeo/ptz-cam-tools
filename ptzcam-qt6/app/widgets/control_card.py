@@ -90,8 +90,9 @@ class ControlCard(QFrame):
         """
         from PySide6.QtWidgets import QComboBox
         combo = QComboBox()
-        combo.setFixedWidth(fixed_width)
+        combo.setMinimumWidth(fixed_width)
         combo.setMaxVisibleItems(max_visible)
+        combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         return combo
 
     @staticmethod

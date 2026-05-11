@@ -176,6 +176,37 @@ def build_focus(speed: int) -> bytes:
     return packet
 
 
+def build_auto_focus() -> bytes:
+    """Build a One Push AF (Auto Focus) trigger command.
+
+    Command: 81 01 04 18 01 FF
+
+    Triggers the camera to perform auto focus once.
+
+    Returns:
+        VISCA command packet bytes.
+    """
+    return bytes([VISCA_HEADER | 0x01, VISCA_COMMAND,
+                  0x04, 0x18, 0x01, VISCA_TERMINATOR])
+
+
+def build_focus_mode(mode: int) -> bytes:
+    """Build a Focus Mode command.
+
+    Command:
+      Auto Focus:   81 01 04 38 02 FF
+      Manual Focus: 81 01 04 38 03 FF
+
+    Args:
+        mode: 2 = Auto Focus, 3 = Manual Focus.
+
+    Returns:
+        VISCA command packet bytes.
+    """
+    return bytes([VISCA_HEADER | 0x01, VISCA_COMMAND,
+                  0x04, 0x38, mode & 0x03, VISCA_TERMINATOR])
+
+
 def build_preset_set(preset_id: int) -> bytes:
     """Build a Preset Set command.
 

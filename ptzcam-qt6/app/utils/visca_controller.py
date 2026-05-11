@@ -18,6 +18,7 @@ from typing import Optional, Callable
 from app.utils.visca_protocol import (
     build_pan_tilt, build_pan_tilt_stop, build_home,
     build_zoom, build_focus,
+    build_auto_focus, build_focus_mode,
     build_preset_set, build_preset_recall, build_preset_clear,
     ViscaResponse,
 )
@@ -221,6 +222,30 @@ class ViscaController:
         if not self._ensure_connected():
             return False
         return self._send(build_focus(speed))
+
+    def auto_focus(self) -> bool:
+        """Trigger One Push Auto Focus.
+
+        Returns:
+            True if command sent.
+        """
+        if not self._ensure_connected():
+            return False
+        return self._send(build_auto_focus())
+
+    def set_focus_mode(self, auto: bool) -> bool:
+        """Set focus mode.
+
+        Args:
+            auto: True for Auto Focus, False for Manual Focus.
+
+        Returns:
+            True if command sent.
+        """
+        if not self._ensure_connected():
+            return False
+        mode = 2 if auto else 3  # 2=AF, 3=MF
+        return self._send(build_focus_mode(mode))
 
     # ------------------------------------------------------------------
     # Presets

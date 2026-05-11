@@ -112,13 +112,16 @@ class RTSPTab(QWidget):
         row.addWidget(ControlCard.make_label("RTSP URL:"))
         self._url_combo = QComboBox()
         self._url_combo.setEditable(True)
-        self._url_combo.setFixedWidth(400)
+        self._url_combo.setMinimumWidth(280)
         self._url_combo.setInsertPolicy(QComboBox.InsertAtTop)
         self._url_combo.setMaxCount(7)  # 5 history + 2 built-in
         # Built-in defaults
         self._url_combo.addItem("rtsp://192.168.2.254/PSIA/Streaming/channels/h264")
         self._url_combo.addItem("rtsp://192.168.1.253:554/live/av0")
         self._url_combo.setCurrentIndex(0)
+        # Adjust width to content AFTER items are populated
+        self._url_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self._url_combo.adjustSize()
         self._url_combo.lineEdit().returnPressed.connect(self._connect_rtsp)
         row.addWidget(self._url_combo)
 
@@ -159,6 +162,8 @@ class RTSPTab(QWidget):
 
         self._proto_combo = QComboBox()
         self._proto_combo.addItems(["UDP", "TCP"])
+        self._proto_combo.setMinimumWidth(60)
+        self._proto_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self._proto_combo.setToolTip("UDP: 低延迟, 可能丢包\nTCP: 更稳定, 延迟稍高")
         row.addWidget(self._proto_combo)
         ControlCard.add_stretch(row)
