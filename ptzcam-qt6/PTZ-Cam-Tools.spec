@@ -103,5 +103,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['assets\\app_dark.ico'],
+    icon=['assets\\app_light_with_dark_bg.ico'],
 )
