@@ -56,6 +56,9 @@ class MainWindow(QMainWindow):
         
         self._setup_ui()
         self._logger.debug("Main window UI setup complete")
+
+        # After window is shown, adjust so client area = DEFAULT sizes
+        QTimer.singleShot(0, self._adjust_client_area)
     
     def _setup_ui(self) -> None:
         """Set up the main window UI."""
@@ -88,6 +91,22 @@ class MainWindow(QMainWindow):
         # Debug overlay (press F12 to toggle widget labels)
         from app.utils.debug_overlay import DebugOverlay
         self._debug_overlay = DebugOverlay(self)
+
+    def _adjust_client_area(self) -> None:
+        """Resize window so client (content) area matches DEFAULT sizes.
+
+        Uses frameGeometry() - geometry() difference to account for
+        title bar and window border on any platform.
+        """
+        title_bar = self.frameGeometry().height() - self.geometry().height()
+        border_w = self.frameGeometry().width() - self.geometry().width()
+        # Width: add border to DEFAULT_WIDTH; Height: add title bar
+        from app.utils.constants import DEFAULT_WIDTH, DEFAULT_HEIGHT
+        self.resize(DEFAULT_WIDTH + border_w, DEFAULT_HEIGHT + title_bar)
+        self._logger.debug(
+            f"Adjusted window to {DEFAULT_WIDTH + border_w}x"
+            f"{DEFAULT_HEIGHT + title_bar} (client: {DEFAULT_WIDTH}x{DEFAULT_HEIGHT})"
+        )
     
     def _create_tab_widget(self, parent_layout, stretch: int = 1) -> None:
         """Create and configure the tab widget.

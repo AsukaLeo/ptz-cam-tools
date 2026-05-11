@@ -5,8 +5,8 @@ ASPECT_W: int = 16
 ASPECT_H: int = 10
 MIN_WIDTH: int = 900
 MIN_HEIGHT: int = 500
-DEFAULT_WIDTH: int = 1100
-DEFAULT_HEIGHT: int = 780
+DEFAULT_WIDTH: int = 1300
+DEFAULT_HEIGHT: int = 680
 
 # Version info
 VERSION: str = "0.33.508"

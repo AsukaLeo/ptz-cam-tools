@@ -1,116 +1,253 @@
-"""Debug overlay — F12 toggles widget name/geometry display on top of the UI."""
+"""Debug overlay — F12 toggles widget name/geometry display on top of the UI.
 
-from PySide6.QtCore import Qt, QRect, QPoint
-from PySide6.QtGui import QPainter, QColor, QPen, QFont
+Features:
+- F12 toggle visibility (top-right hint bar).
+- Hover over a widget → its label + outline highlight gold.
+- Click a widget's label → hide that widget's annotation (toggle).
+- Hidden widgets show as dashed outline + ✕ mark.
+- Labels try inside-widget placement first, then outside with overlap avoidance.
+- Color-coded outlines by widget type.
+"""
+
+from PySide6.QtCore import Qt, QRect, QPoint, QEvent
+from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics
 from PySide6.QtWidgets import QWidget
 
 
 class DebugOverlay(QWidget):
-    """Transparent overlay that draws widget outlines, names, and sizes.
+    """Transparent overlay that draws widget outlines, names, and sizes."""
 
-    Press F12 to toggle visibility. Only widgets with a non-empty
-    objectName() are annotated.
-    """
+    # (outline, label_bg) — hex strings per widget type
+    TYPE_COLORS: dict[str, tuple[str, str]] = {
+        "QPushButton": ("#3498db", "#2980b9"),
+        "QLabel":      ("#9b59b6", "#8e44ad"),
+        "QComboBox":   ("#2ecc71", "#27ae60"),
+        "QLineEdit":   ("#e67e22", "#d35400"),
+        "QTextEdit":   ("#f1c40f", "#c0392b"),
+        "QSlider":     ("#34495e", "#2c3e50"),
+        "QTabWidget":  ("#e74c3c", "#c0392b"),
+        "QFrame":      ("#95a5a6", "#7f8c8d"),
+    }
+    DEFAULT_OUTLINE = "#ff6b6b"
+    DEFAULT_BG = "#e05555"
+    HOVER_COLOR = QColor("#ffd700")  # gold
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
         self.setStyleSheet("background: transparent;")
+        self.setMouseTracking(True)
         self.hide()
 
         self._target = parent
         self._font = QFont("Consolas, monospace", 8)
-        self._pen_outline = QPen(QColor(255, 107, 107, 200), 1)
-        self._pen_label = QPen(QColor(255, 255, 255))
-        self._bg_label = QColor(255, 107, 107, 180)
+        self._hovered: QWidget | None = None
+        self._hidden_names: set[str] = set()      # objectNames to skip
+        self._label_rects: list[tuple[QRect, str]] = []  # (rect, name) from last paint
+        self._placed: list[QRect] = []             # already-placed label rects
 
-        # Install event filter on parent to catch F12
         parent.installEventFilter(self)
 
-    def eventFilter(self, obj, event):
-        from PySide6.QtCore import QEvent
+    # ── F12 toggle ──────────────────────────────────────────────
+
+    def eventFilter(self, obj, event) -> bool:
         if event.type() == QEvent.Type.KeyPress:
-            ke = event
-            if ke.key() == Qt.Key.Key_F12:
+            if event.key() == Qt.Key.Key_F12:
                 if not self.isVisible():
-                    self._auto_name_widgets()
+                    self._auto_name()
+                    self._hidden_names.clear()  # 恢复所有已隐藏的标签
                     self.raise_()
-                    self.resize(self._target.size())
+                self.resize(self._target.size())
                 self.setVisible(not self.isVisible())
                 return True
         return super().eventFilter(obj, event)
 
-    def _auto_name_widgets(self) -> None:
-        """Auto-assign objectName to all unnamed visible widgets."""
-        name_counts: dict[str, int] = {}
-        for child in self._target.findChildren(QWidget):
-            if child.objectName():
+    def _auto_name(self) -> None:
+        """Auto-assign objectName to unnamed visible widgets."""
+        counts: dict[str, int] = {}
+        for ch in self._target.findChildren(QWidget):
+            if ch.objectName():
                 continue
-            if not child.isVisible():
+            if not ch.isVisible():
                 continue
-            if child.size().width() < 15 or child.size().height() < 10:
+            if ch.width() < 15 or ch.height() < 10:
                 continue
-            # Generate name from class
-            cls = type(child).__name__
-            name_counts[cls] = name_counts.get(cls, 0) + 1
-            child.setObjectName(f"{cls}_{name_counts[cls]}")
+            cls = type(ch).__name__
+            counts[cls] = counts.get(cls, 0) + 1
+            ch.setObjectName(f"{cls}_{counts[cls]}")
+
+    # ── Hover — find smallest widget containing cursor ───────────
+
+    def _find_widget_at(self, pos: QPoint) -> QWidget | None:
+        """Find the deepest (smallest) widget containing cursor.
+
+        Uses same rect-based iteration as paintEvent — reliable
+        across all widget types unlike childAt() on QMainWindow.
+        """
+        best: QWidget | None = None
+        best_area = float("inf")
+        for ch in self._target.findChildren(QWidget):
+            name = ch.objectName()
+            if not name or not ch.isVisible():
+                continue
+            if ch.width() < 18 or ch.height() < 10:
+                continue
+            r = QRect(ch.mapTo(self._target, QPoint(0, 0)), ch.size())
+            if r.contains(pos):
+                area = ch.width() * ch.height()
+                if area < best_area:
+                    best_area = area
+                    best = ch
+        return best
+
+    def mouseMoveEvent(self, event) -> None:
+        old = self._hovered
+        self._hovered = self._find_widget_at(event.position().toPoint())
+        if old is not self._hovered:
+            self.update()
+
+    def leaveEvent(self, event) -> None:
+        if self._hovered is not None:
+            self._hovered = None
+            self.update()
+
+    # ── Click — hide/show individual label ──────────────────────
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            pos = event.position().toPoint()
+            for lr, name in self._label_rects:
+                if lr.contains(pos):
+                    if name in self._hidden_names:
+                        self._hidden_names.discard(name)
+                    else:
+                        self._hidden_names.add(name)
+                    self.update()
+                    return
+
+    # ── Paint ───────────────────────────────────────────────────
 
     def paintEvent(self, event) -> None:
         if not self.isVisible():
             return
 
+        self.resize(self._target.size())
+
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self._placed.clear()
+        self._label_rects.clear()
 
-        self._paint_widget(painter, self._target, QPoint(0, 0))
-
-    def _paint_widget(self, painter: QPainter, widget: QWidget, offset: QPoint) -> None:
-        """Recursively paint outlines and labels for all visible widgets."""
-        for child in widget.findChildren(QWidget):
-            if not child.isVisible():
+        # Collect all annotatable widgets, sorted top→bottom, left→right
+        items: list[tuple[int, int, QWidget, QRect]] = []
+        for ch in self._target.findChildren(QWidget):
+            name = ch.objectName()
+            if not name or not ch.isVisible():
                 continue
-            name = child.objectName()
-            if not name:
+            if ch.width() < 18 or ch.height() < 10:
+                continue
+            pos = ch.mapTo(self._target, QPoint(0, 0))
+            r = QRect(pos, ch.size())
+            if not self.rect().intersects(r):
+                continue
+            items.append((pos.y(), pos.x(), ch, r))
+
+        items.sort(key=lambda x: (x[0], x[1]))  # top→bottom, left→right
+
+        for _, _, ch, rect in items:
+            name = ch.objectName()
+            cls = type(ch).__name__
+            outline_hex, bg_hex = self.TYPE_COLORS.get(
+                cls, (self.DEFAULT_OUTLINE, self.DEFAULT_BG))
+
+            is_hidden = name in self._hidden_names
+            is_hovered = (ch == self._hovered and not is_hidden)
+
+            if is_hidden:
+                # Dashed outline + subtle cross
+                pen = QPen(QColor(180, 180, 180, 160), 1)
+                pen.setStyle(Qt.PenStyle.DashLine)
+                painter.setPen(pen)
+                painter.drawRect(rect)
+                # Small ✕ in center
+                painter.setFont(QFont("Consolas, monospace", 6))
+                painter.setPen(QColor(180, 180, 180, 120))
+                painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "✕")
                 continue
 
-            pos = child.mapTo(self._target, QPoint(0, 0))
-            rect = QRect(pos, child.size())
+            if is_hovered:
+                oc = self.HOVER_COLOR
+                bg = QColor("#ffd700")
+                pw = 3
+            else:
+                oc = QColor(outline_hex)
+                bg = QColor(bg_hex)
+                pw = 1
 
-            # Skip tiny widgets
-            if rect.width() < 18 or rect.height() < 10:
-                continue
-            if not self.rect().intersects(rect):
-                continue
-
-            # Choose color based on widget type
-            cls = type(child).__name__
-            colors = {
-                "QPushButton": QColor(52, 152, 219, 200),
-                "QLabel": QColor(155, 89, 182, 200),
-                "QComboBox": QColor(46, 204, 113, 200),
-                "QLineEdit": QColor(230, 126, 34, 200),
-                "QTextEdit": QColor(241, 196, 15, 200),
-                "QSlider": QColor(52, 73, 94, 200),
-                "QTabWidget": QColor(231, 76, 60, 200),
-                "QFrame": QColor(149, 165, 166, 200),
-            }
-            color = colors.get(cls, QColor(255, 107, 107, 180))
-
-            # Draw outline
-            painter.setPen(QPen(color, 1))
+            # Outline
+            painter.setPen(QPen(oc, pw))
             painter.drawRect(rect)
 
-            # Draw label: name + size + type
+            # Label
             label = f"{name} {rect.width()}x{rect.height()} [{cls}]"
             painter.setFont(self._font)
             fm = painter.fontMetrics()
-            label_w = fm.horizontalAdvance(label) + 6
-            label_h = fm.height() + 4
-            label_rect = QRect(pos.x(), pos.y() - label_h, label_w, label_h)
+            lw = fm.horizontalAdvance(label) + 8
+            lh = fm.height() + 4
 
-            painter.fillRect(label_rect, color)
-            painter.setPen(QPen(QColor(255, 255, 255)))
-            painter.drawText(label_rect.adjusted(2, 1, -2, 0),
-                             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                             label)
+            # Pick best label position
+            lr = self._pick_label_pos(rect, lw, lh)
+
+            # Draw label background
+            painter.fillRect(lr, bg)
+            painter.setPen(QPen(QColor("#fff"), 1 if not is_hovered else 2))
+            if is_hovered:
+                # Border around hovered label for extra emphasis
+                painter.drawRect(lr)
+            painter.drawText(
+                lr.adjusted(2, 1, -2, 0),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                label,
+            )
+            self._placed.append(lr)
+            self._label_rects.append((lr, name))
+
+        # Hint bar (top-right)
+        hint = "DebugOverlay — F12 隐藏 ｜ 点击标签隐藏"
+        painter.setFont(QFont("Consolas", 9))
+        fm = painter.fontMetrics()
+        hw = fm.horizontalAdvance(hint) + 16
+        hh = fm.height() + 10
+        hr = QRect(self.width() - hw - 8, 4, hw, hh)
+        painter.fillRect(hr, QColor(0, 0, 0, 180))
+        painter.setPen(Qt.GlobalColor.white)
+        painter.drawText(
+            hr.adjusted(6, 4, -6, 0),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            hint,
+        )
+
+    # ── Label placement with overlap avoidance ──────────────────
+
+    def _pick_label_pos(self, wr: QRect, lw: int, lh: int) -> QRect:
+        """Pick best label position. Prefers inside-widget, then outside.
+
+        Order: inside (if fits) → top → bottom → right → left.
+        Each outside candidate checks overlap with already-placed labels.
+        """
+        inside = QRect(wr.x() + 2, wr.y() + 2, min(lw, wr.width() - 4), lh)
+        if inside.width() >= lw * 0.7 and inside.height() >= lh:
+            return inside
+
+        candidates = [
+            QRect(wr.x(),          wr.y() - lh,          lw, lh),   # top
+            QRect(wr.x(),          wr.y() + wr.height(), lw, lh),   # bottom
+            QRect(wr.x() + wr.width(), wr.y(),           lw, lh),   # right
+            QRect(wr.x() - lw,     wr.y(),               lw, lh),   # left
+        ]
+        for cr in candidates:
+            if (cr.right() <= self.width() and cr.left() >= 0 and
+                    cr.bottom() <= self.height() and cr.top() >= 0):
+                if not any(cr.intersects(pr) for pr in self._placed):
+                    return cr
+        return candidates[0]  # fallback: top
