@@ -10,7 +10,7 @@ DEFAULT_HEIGHT: int = 680
 
 # Version info
 VERSION: str = "0.33.508"
-VERSION_STRING: str = f"V {VERSION}_f170cb7 By Asuka"
+VERSION_STRING: str = f"V {VERSION}_fb48774 By Asuka"
 
 # Colors
 COLOR_BG_MAIN: str = "#fff"
