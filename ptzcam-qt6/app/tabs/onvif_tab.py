@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ONVIF camera tab page with device discovery and video preview."""
 
 import time

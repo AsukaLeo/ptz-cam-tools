@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Help card widget for tab usage instructions."""
 
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QWidget

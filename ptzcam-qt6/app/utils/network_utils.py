@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Network interface utility functions shared across video source tabs."""
 
 import socket

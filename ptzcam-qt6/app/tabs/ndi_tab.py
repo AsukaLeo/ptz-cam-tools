@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """NDI stream tab page with source discovery and video capture."""
 
 import time

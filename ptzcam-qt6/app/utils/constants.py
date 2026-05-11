@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Application constants."""
 
 # Window constants
@@ -9,8 +10,8 @@ DEFAULT_WIDTH: int = 1300
 DEFAULT_HEIGHT: int = 680
 
 # Version info
-VERSION: str = "0.34.511"
-VERSION_STRING: str = f"V {VERSION}_ac873ce By Asuka"
+VERSION: str = "0.35.511"
+VERSION_STRING: str = f"V {VERSION}_XXXXXXX By Asuka"
 
 # Colors
 COLOR_BG_MAIN: str = "#fff"

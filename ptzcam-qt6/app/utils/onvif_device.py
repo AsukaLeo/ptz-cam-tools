@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ONVIF device discovery, connection and control module.
 
 Provides ONVIF device discovery via WS-Discovery, device connection

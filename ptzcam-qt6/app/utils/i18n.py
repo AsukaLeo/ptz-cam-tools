@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Internationalization module — simple dict-based translation."""
 
 from typing import Callable, Optional

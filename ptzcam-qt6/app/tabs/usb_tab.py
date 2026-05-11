@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """USB camera tab page with DirectShow capture."""
 
 from PySide6.QtWidgets import (

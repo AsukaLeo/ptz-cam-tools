@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Debug overlay — F12 toggles widget name/geometry display on top of the UI.
 
 Features:

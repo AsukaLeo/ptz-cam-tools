@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """PTZ control panel widget."""
 
 from PySide6.QtWidgets import (

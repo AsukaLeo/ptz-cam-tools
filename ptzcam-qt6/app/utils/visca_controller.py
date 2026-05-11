@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """VISCA camera controller.
 
 Provides a high-level interface for PTZ camera control via the VISCA

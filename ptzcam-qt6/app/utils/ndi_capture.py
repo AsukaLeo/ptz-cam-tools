@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """NDI source discovery and video capture module.
 
 Provides high-level wrappers around the NDI SDK for source discovery

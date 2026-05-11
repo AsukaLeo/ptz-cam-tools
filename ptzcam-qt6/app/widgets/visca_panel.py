@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """VISCA control panel widget."""
 
 import time

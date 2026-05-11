@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets', 'assets'), ('arrow_down.svg', '.'), ('thirdparty/ffmpeg/bin', 'thirdparty/ffmpeg/bin')],
+    datas=[('assets', 'assets'), ('arrow_down.svg', '.'), ('thirdparty/ffmpeg/bin', 'thirdparty/ffmpeg/bin'), ('C:/Users/asuka/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages/wsdl', 'wsdl')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

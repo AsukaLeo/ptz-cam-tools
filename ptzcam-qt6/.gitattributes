@@ -1,0 +1,16 @@
+# Auto-detect text files, handle line endings properly
+* text=auto
+
+# Python files: UTF-8 encoding, CRLF on Windows
+*.py text encoding=utf-8 eol=crlf
+
+# Documentation
+*.md text encoding=utf-8 eol=crlf
+*.svg text encoding=utf-8
+
+# Binary files
+*.dll binary
+*.ico binary
+*.png binary
+*.exe binary
+*.zip binary

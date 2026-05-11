@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """RTSP stream tab page with OpenCV FFmpeg capture."""
 
 import time
