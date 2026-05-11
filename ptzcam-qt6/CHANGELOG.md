@@ -15,6 +15,64 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.33.508 — Layout V2 布局重构 + AF 聚焦 + Bug 修复
+
+**Commit**: `8bc3eb8` · **Branch**: `layout-v2` · **日期**: 2026-05-11
+
+### Layout V2 — UI 布局重构
+- **核心改动**: 主窗口从全高 Tab 改为 HBoxLayout（左侧 Tab 预览 + 右侧 PTZ/VISCA 面板 340px）
+- 窗口默认 1300x680，最小 900x500
+- 右侧面板 PTZ 4/7 高度 + VISCA 3/7 高度
+- VISCA/PTZ 自适应高度布局，避免串口 Tab 被挤压消失
+- ControlCard 最小 500px，预览区 16:9 自适应
+- 全局 QComboBox 改用 AdjustToContents 自适应宽度
+- 状态栏新增 i18n 支持（`状态:` 前缀跟随语言切换）
+
+### VISCA 增强
+- **自动聚焦 (One Push AF)**: 新增 `auto_focus()` -> `build_auto_focus()`
+- **聚焦模式切换**: `set_focus_mode(auto=True/False)` -> `build_focus_mode()`
+- **串口方向反转按钮**: 网络/串口共享方向状态
+- PTZ 面板布局重排：方向控制 + 变焦/聚焦分离，预置位输入从 QSpinBox 改为 QLineEdit
+- IP 模式不走校验和（Dahua 兼容）
+
+### 开发工具
+- **DebugOverlay (F12)**: 253 行新文件，自动标注所有控件（名称+宽高+类型，悬停高亮，点击隐藏）
+- 版本号自动跟随 git hash 更新
+
+### Bug 修复（3 项）
+| Bug | 根因 | 修复 |
+|-----|------|------|
+| 英文界面下视频无法播放 | `play_btn.text() == "播放"` 硬编码中文比对 | 改用 `_is_playing` 布尔标志（3 处） |
+| 所有操作状态更新崩溃 | `main_window.py` 缺少 `from app.utils.i18n import tr` | 模块级导入，删除冗余 inline import |
+| 英文下 VISCA 断开连接按钮失效 | `visca_text == "断开连接"` 文本比对 | 改用 `_serial_is_connected` / `_network_is_connected` 布尔标志 |
+
+### 修改文件（13 files, +1145/-122）
+```
+app/main_window.py          |  85   Layout V2 + tr import + status i18n
+app/widgets/visca_panel.py  | 223   串口刷新、方向反转、状态标志、自适应高度
+app/widgets/ptz_panel.py    | 210   AF/MF 按钮、布局重排、预置位输入
+app/utils/debug_overlay.py  | 253   新增 F12 调试覆盖层
+app/utils/visca_protocol.py |  31   build_auto_focus() + build_focus_mode()
+app/utils/visca_controller.py| 25   auto_focus() + set_focus_mode()
+app/tabs/usb_tab.py         |   6   _is_playing 布尔标志
+app/tabs/rtsp_tab.py        |   7   Combo AdjustToContents
+app/utils/constants.py      |   8   窗口尺寸 960->1300
+app/utils/i18n.py           |   2   AF/MF 翻译
+app/widgets/control_card.py |   3   Combo AdjustToContents
+docs/layout-v2-prototype.html | 189 交互原型
+docs/控件命名参考.html       | 225  控件命名规范
+```
+
+### 踩坑记录
+1. **PySide6 QResizeEvent 在 QtGui 不在 QtCore** — import 路径诡异
+2. **深色主题适配**: 全局 QSS 必须强制 `QWidget { color: #333; background-color: #fff; }`，否则深色系统下文字不可见
+3. **QComboBox 下拉列表**必须显式设 QAbstractItemView 的 border/background，否则不可见
+4. **i18n 按钮状态**: 绝对不能靠 UI 文本比对判断状态，必须用独立布尔标志
+5. **VISCA 串口 Tab 消失**: `QTabWidget` 内层 Tab 在某些高度下被完全隐藏，需设最小高度 220px
+6. **Python import 致命性**: 一个缺失的模块级 import 导致所有 Tab 全部崩溃，而非仅影响单一功能
+
+---
+
 ## V 0.25.507 — UI/UX 改进 + ONVIF 增强 + Bug 修复
 
 **Tag**: `V0.25.507` · **Commit**: `b290e74` · **日期**: 2026-05-07
