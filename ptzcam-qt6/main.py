@@ -136,9 +136,10 @@ def main() -> int:
     ).replace("\\", "/")
     
     # -- Adaptive app icon: choose dark/light variant based on system color scheme --
+    asset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+    
     def _get_icon_path(scheme):
         """Return the appropriate icon file path for the given color scheme."""
-        asset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
         icon_name = "app_dark.ico" if scheme == Qt.ColorScheme.Dark else "app_light.ico"
         return os.path.join(asset_dir, icon_name).replace("\\", "/")
     
@@ -146,9 +147,35 @@ def main() -> int:
     app.setWindowIcon(QIcon(_get_icon_path(_current_scheme)))
     logger.debug(f"App icon set for color scheme: {_current_scheme}")
     
+    # -- Win32: override taskbar icon (ICON_BIG) with dark-bg variant in light mode --
+    # On Windows, Qt's setWindowIcon() sets both ICON_SMALL (title bar)
+    # and ICON_BIG (taskbar) to the same icon.  We keep the title-bar icon
+    # as app_light.ico and only swap the taskbar icon to the dark-bg version.
+    _light_taskbar_icon = os.path.join(asset_dir, "app_light_with_dark_bg.ico").replace("\\", "/")
+    
+    def _override_taskbar_icon(hwnd: int, ico_path: str) -> None:
+        """Set ICON_BIG (taskbar / Alt-Tab) independently of the title-bar icon."""
+        if sys.platform != "win32":
+            return
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+        IMAGE_ICON = 1
+        LR_LOADFROMFILE = 0x00000010
+        WM_SETICON = 0x0080
+        ICON_BIG = 1
+        hicon = user32.LoadImageW(None, ico_path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE)
+        if hicon:
+            user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, hicon)
+    
+    def _apply_taskbar_icon_for_scheme(window_hwnd, scheme):
+        if scheme == Qt.ColorScheme.Light:
+            _override_taskbar_icon(window_hwnd, _light_taskbar_icon)
+    
     # React to system theme changes at runtime
     def _on_color_scheme_changed(scheme):
         app.setWindowIcon(QIcon(_get_icon_path(scheme)))
+        _apply_taskbar_icon_for_scheme(int(window.winId()), scheme)
         logger.info(f"App icon switched for color scheme: {scheme}")
     
     app.styleHints().colorSchemeChanged.connect(_on_color_scheme_changed)
@@ -160,6 +187,10 @@ def main() -> int:
     # Create and show main window
     window = MainWindow()
     window.show()
+    
+    # Apply taskbar icon override on initial launch (light mode only)
+    _apply_taskbar_icon_for_scheme(int(window.winId()), _current_scheme)
+    
     logger.info("Main window displayed")
     
     # Run event loop
