@@ -134,12 +134,23 @@ def main() -> int:
         "assets", "Background.png"
     ).replace("\\", "/")
     
-    # Set application icon (from assets folder)
-    icon_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "assets", "app_square.ico"
-    ).replace("\\", "/")
-    app.setWindowIcon(QIcon(icon_path))
+    # -- Adaptive app icon: choose dark/light variant based on system color scheme --
+    def _get_icon_path(scheme):
+        """Return the appropriate icon file path for the given color scheme."""
+        asset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+        icon_name = "app_dark.ico" if scheme == Qt.ColorScheme.Dark else "app_light.ico"
+        return os.path.join(asset_dir, icon_name).replace("\\", "/")
+    
+    _current_scheme = app.styleHints().colorScheme()
+    app.setWindowIcon(QIcon(_get_icon_path(_current_scheme)))
+    logger.debug(f"App icon set for color scheme: {_current_scheme}")
+    
+    # React to system theme changes at runtime
+    def _on_color_scheme_changed(scheme):
+        app.setWindowIcon(QIcon(_get_icon_path(scheme)))
+        logger.info(f"App icon switched for color scheme: {scheme}")
+    
+    app.styleHints().colorSchemeChanged.connect(_on_color_scheme_changed)
     
     # Apply global stylesheet
     app.setStyleSheet(get_global_stylesheet(arrow_svg, bg_path))
