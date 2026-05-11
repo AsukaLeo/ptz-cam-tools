@@ -15,6 +15,30 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.34.511 — 自适应系统深色/浅色模式 Logo
+
+**Commit**: `ac873ce` · **Branch**: `layout-v2` · **日期**: 2026-05-11
+
+### 功能
+- **自适应图标**: 使用 `QStyleHints.colorScheme()` 检测系统深色/浅色模式
+  - 深色模式 → 加载 `app_dark.ico`（亮色图标，适配深色任务栏）
+  - 浅色模式 → 加载 `app_light.ico`（深色图标，适配浅色任务栏）
+- **运行时切换**: 注册 `colorSchemeChanged` 信号，系统切换深浅模式时自动跟换图标
+- **图标文件管理**: `app_square.ico` 重命名为 `app_dark.ico`，新增 `app_light.ico` 及源文件 `app_ico_light.png`
+
+### 修改文件（3 files, +18/-7）
+```
+main.py              |  21   图标自适应逻辑（colorScheme检测+信号连接）
+build_exe.bat        |   2   PyInstaller打包图标改为app_dark.ico
+assets/app_square.ico → app_dark.ico | 重命名
+assets/app_light.ico | 新增  浅色模式图标
+```
+
+### 踩坑记录
+- 无
+
+---
+
 ## V 0.33.508 — Layout V2 布局重构 + AF 聚焦 + Bug 修复
 
 **Commit**: `8bc3eb8` · **Branch**: `layout-v2` · **日期**: 2026-05-11
