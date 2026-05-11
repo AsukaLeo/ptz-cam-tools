@@ -15,6 +15,41 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.35.511 — 修复中文编码乱码
+
+**Commit**: `24f62b0` · **Branch**: `layout-v2` · **日期**: 2026-05-11
+
+### 修复
+- **所有含中文的 `.py` 文件添加 `# -*- coding: utf-8 -*-` 声明**（15 个文件）
+- **新增 `.gitattributes`** 声明 Python 文件为 UTF-8 编码、CRLF 行尾
+- 修复 PyInstaller 编译后 EXE 中文 UI 文本乱码（之前缺少编码声明，Windows 环境下中文被错误解析）
+
+### 修改文件（17 files, +34/-3）
+```
+.gitattributes          |   16  新增
+app/main_window.py      |    1  添加 UTF-8 声明
+app/tabs/usb_tab.py     |    1  ↑
+app/tabs/rtsp_tab.py    |    1  ↑
+app/tabs/ndi_tab.py     |    1  ↑
+app/tabs/onvif_tab.py   |    1  ↑
+app/utils/constants.py  |    3  UTF-8 声明 + 版本号
+app/utils/debug_overlay.py     |    1  UTF-8 声明
+app/utils/i18n.py       |    1  ↑
+app/utils/ndi_capture.py       |    1  ↑
+app/utils/network_utils.py     |    1  ↑
+app/utils/onvif_device.py      |    1  ↑
+app/utils/visca_controller.py  |    1  ↑
+app/widgets/ptz_panel.py       |    1  ↑
+app/widgets/visca_panel.py     |    1  ↑
+app/widgets/help_card.py       |    1  ↑
+PTZ-Cam-Tools.spec             |    2  重新生成
+```
+
+### 踩坑记录
+- 无
+
+---
+
 ## V 0.34.511 — 自适应系统深色/浅色模式 Logo
 
 **Commit**: `ac873ce` · **Branch**: `layout-v2` · **日期**: 2026-05-11
