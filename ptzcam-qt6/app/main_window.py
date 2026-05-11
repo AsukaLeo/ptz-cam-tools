@@ -18,6 +18,7 @@ from app.widgets import PreviewWidget, PTZPanel, VISCAPanel
 from app.tabs import USBTab, RTSPTab, NDITab, ONVIFTab
 from app.utils.logger import get_logger
 from app.utils.visca_controller import ViscaController
+from app.utils.i18n import tr
 
 
 class MainWindow(QMainWindow):
@@ -320,7 +321,6 @@ class MainWindow(QMainWindow):
             self._active_tab_name = tab_names[index]
 
         status = statuses[index] if index < len(statuses) else STATUS_READY
-        from app.utils.i18n import tr
         self.update_status(tr(status))
 
         # Refresh video info from the active tab's cache
