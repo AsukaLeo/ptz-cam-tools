@@ -1,0 +1,78 @@
+NOTICE
+======
+
+PTZ-Cam-Tools
+Copyright (C) 2026 Asuka
+Licensed under GNU General Public License v3.0 or later (GPL-3.0-or-later).
+See LICENSE for the full license text.
+
+This project incorporates third-party components under various open-source
+licenses. The following is a summary of these components and their licenses.
+All trademarks and copyrights are property of their respective owners.
+
+--------------------------------------------------------------------
+Python Runtime Dependencies (installed via pip)
+--------------------------------------------------------------------
+
+  PySide6 6.11.0
+    Copyright (C) The Qt Company Ltd.
+    License: GPL-3.0 / LGPL-3.0 / GPL-2.0 (tri-license, used under GPL-3.0)
+    Source: https://www.qt.io/
+
+  opencv-python 4.13.0.92
+    Copyright (C) OpenCV team
+    License: Apache-2.0
+    Source: https://opencv.org/
+
+  psutil 7.0.0
+    Copyright (C) 2009-2025 Giampaolo Rodola
+    License: BSD-3-Clause
+    Source: https://github.com/giampaolo/psutil
+
+  onvif-zeep 0.2.12
+    Copyright (C) ONVIF-zeep contributors
+    License: MIT
+    Source: https://github.com/quatanium/onvif-zeep
+
+  wsdiscovery 2.1.2
+    Copyright (C) WS-Discovery contributors
+    License: MIT
+    Source: https://github.com/apowers313/wsdiscovery
+
+  pyserial >=3.5
+    Copyright (C) Chris Liechti
+    License: BSD-3-Clause
+    Source: https://github.com/pyserial/pyserial
+
+--------------------------------------------------------------------
+Build / System Dependencies (not bundled in source)
+--------------------------------------------------------------------
+
+  Qt 6 (C++ backend)
+    Copyright (C) The Qt Company Ltd.
+    License: LGPL-3.0 / GPL-3.0
+    Source: https://www.qt.io/
+
+  FFmpeg
+    Copyright (C) FFmpeg team
+    License: LGPL-2.1-or-later
+    Source: https://ffmpeg.org/
+
+  PortAudio
+    Copyright (C) PortAudio team
+    License: MIT
+    Source: http://www.portaudio.com/
+
+  NDI® SDK
+    Copyright (C) Vizrt Group
+    License: Proprietary (End-User License Agreement)
+    Note: NDI DLLs are NOT bundled in this repository. Users must
+    download and install the NDI SDK separately from:
+    https://ndi.video/
+    The Python bindings in this project interface with NDI via
+    ctypes at runtime and do not incorporate NDI source code.
+
+--------------------------------------------------------------------
+    This product includes software developed by the above copyright
+    holders and their contributors. The use of each component is
+    governed by its respective license.

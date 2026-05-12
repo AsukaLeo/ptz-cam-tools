@@ -1,5 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import sys, os
+sys.path.insert(0, os.getcwd())
+from app.utils.constants import VERSION
 
 a = Analysis(
     ['main.py'],
@@ -90,7 +93,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='PTZ-Cam-Tools',
+    name=f'PTZ-Cam-Tools-V{VERSION}',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

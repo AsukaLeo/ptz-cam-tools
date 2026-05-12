@@ -60,15 +60,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Get version for renaming
-python -c "from app.utils.constants import VERSION_STRING; print(VERSION_STRING.replace(' ',''))" > "%TEMP%\ver.txt"
-set /p VER=<"%TEMP%\ver.txt"
-move "dist\PTZ-Cam-Tools.exe" "dist\PTZ-Cam-Tools-%VER%.exe" >nul 2>&1
-
 echo.
 echo ==========================================
 echo Build successful!
-for %%f in (dist\PTZ-Cam-Tools-*.exe) do echo Output: dist\%%~nxf
+dir dist\PTZ-Cam-Tools-*.exe /b
 echo ==========================================
 echo.
 

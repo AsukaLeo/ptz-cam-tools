@@ -13,9 +13,6 @@ env/
 # IDE
 .idea/
 *.swp
-
-# VLC source (reference only)
-thirdparty/vlc-master/
 *.swo
 *~
 
@@ -36,14 +33,12 @@ Thumbs.db
 *.lastbuildstate
 *.unsuccessfulbuild/*
 
-# Thirdparty build artifacts
-thirdparty/AMCap/Debug/
-thirdparty/AMCap/Backup/
-thirdparty/AMCap/Release/
+# Thirdparty (all - not published, local development reference only)
+thirdparty/
 
-# FFmpeg binary DLLs (large, pushed separately)
-thirdparty/ffmpeg/bin/
-thirdparty/ffmpeg/lib/
+# Handover docs (internal, not for public release)
+HANDOVER.md
+TECH_HANDOVER.md
 
 # NDI SDK DLLs (proprietary, not redistributable with source)
 **/Processing.NDI.Lib*.dll
