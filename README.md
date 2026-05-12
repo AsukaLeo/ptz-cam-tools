@@ -41,11 +41,7 @@ ptzcam-qt6/
 │   ├── tabs/        # 功能 Tab 页面
 │   ├── utils/       # 工具模块
 │   └── widgets/     # 可复用组件
-├── tests/           # 单元测试
-├── thirdparty/      # 第三方依赖 (FFmpeg, AMCap)
 ├── CHANGELOG.md     # 版本迭代记录
-├── HANDOVER.md      # 项目交接说明
-├── TECH_HANDOVER.md # 技术架构文档
 └── main.py          # 入口文件
 ```
 
