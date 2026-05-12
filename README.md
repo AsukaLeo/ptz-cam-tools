@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # PTZ-Cam-Tools
 
 会议摄像机多功能控制工具，面向视频会议场景的音视频产品。
@@ -89,3 +90,7 @@ ptzcam-qt6/
 ---
 
 © 2026 Asuka. Shenzhen.
+=======
+# ptz-cam-tools
+多年音视频行业从业者，手头一直缺少趁手的整合型的多协议播放器用于测试、演示使用。近期AI火了就纯Vibe coding搓了一个工具自用。
+>>>>>>> 0aed97832d0ae3ec6c3523fffc3455c97ba6b61c
