@@ -44,3 +44,12 @@ thirdparty/AMCap/Release/
 # FFmpeg binary DLLs (large, pushed separately)
 thirdparty/ffmpeg/bin/
 thirdparty/ffmpeg/lib/
+
+# NDI SDK DLLs (proprietary, not redistributable with source)
+**/Processing.NDI.Lib*.dll
+**/*.ndi*
+
+# PyInstaller build artifacts
+build/
+dist/*.exe
+*.spec

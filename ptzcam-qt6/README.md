@@ -120,3 +120,45 @@ python -m PyInstaller --onefile --windowed main.py
 
 - **主仓库**：`https://gitea.feiniaoyun.cn/FNY/PTZ-Camara`
 - **分支**：main（稳定）| layout-v2（开发中）| slim-opencv（已合入）
+
+---
+
+## License
+
+Copyright © 2026 Asuka
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the **GNU General Public License** as published by
+the Free Software Foundation, either **version 3** of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+[GNU General Public License](./LICENSE) for more details.
+
+> **非商业承诺**: 作者本人不以盈利为目的发布此项目，仅供学习交流使用。
+> 欢迎 fork 和分发，但请同样遵循 GPL-3.0 协议将你的修改开源。
+
+### 第三方依赖许可声明
+
+本软件使用了以下第三方组件，各组件均受其各自许可证的保护：
+
+| 组件 | 许可证 | 说明 |
+|------|--------|------|
+| **PySide6 / Qt6** | LGPL-3.0 / GPL-3.0 | 本项目按 GPL-3.0 条款使用 |
+| **opencv-python** | Apache 2.0 | |
+| **onvif-zeep / zeep** | MIT | |
+| **WS-Discovery** | MIT | |
+| **pyserial** | BSD | |
+| **psutil** | BSD-3-Clause | |
+| **comtypes** | MIT | |
+| **FFmpeg** | LGPL-3.0 | 仅运行时动态链接 |
+
+### NDI® 商标声明
+
+NDI® is a registered trademark of Vizrt NDI AB.
+本项目的 NDI 支持通过 ctypes 调用 **NDI® SDK**（Vizrt NDI AB 专有软件），
+**不包含 NDI 运行时二进制文件**。
+如需使用 NDI 功能，请从 [ndi.video](https://ndi.video) 安装 NDI Runtime。
+NDI SDK 的使用受 Vizrt NDI AB 的许可条款约束。

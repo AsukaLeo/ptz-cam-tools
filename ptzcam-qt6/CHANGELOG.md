@@ -15,6 +15,24 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 
 ---
 
+## V 0.34.512 — GPL-3.0 开源许可 + 版权审计
+
+**Branch**: `layout-v2` · **日期**: 2026-05-12
+
+### 许可证
+- **GPL-3.0**: 新增 `LICENSE` 文件（GNU General Public License v3）
+- 所有 36 个 Python 源文件添加 GPL-3.0-only SPDX header
+- `README.md`: 新增 License 章节、第三方依赖许可声明、NDI® 商标声明
+- `requirements.txt`: 注释说明 PySide6 按 GPL-3.0 条款使用
+- `.gitignore`: 新增 NDI DLL 排除规则 + PyInstaller 构建产物
+
+### 版权审计
+- 审查全部 8 个 pip 包 + 4 个二进制依赖的许可证兼容性
+- 确认所有依赖与 GPL-3.0 兼容（PySide6 按 GPL-3.0 选项使用）
+- NDI SDK（Vizrt 专有）不随源码分发，用户需自行安装 NDI Runtime
+
+---
+
 ## V 0.34.511_14288d9 — EXE 体积优化 + 浅色模式任务栏图标暗底适配
 
 **Commit**: `14288d9` → `4a5d40c` · **Branch**: `layout-v2` · **日期**: 2026-05-11
