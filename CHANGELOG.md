@@ -5,16 +5,6 @@
 ```
 V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 ```
-
-| 字段 | 说明 | 示例 |
-|------|------|------|
-| 主版本号 | 大版本里程碑（0 = 开发中） | 0 |
-| 迭代次数 | 累计迭代次数 | 14 |
-| 日期 | MDD 格式 | 506 = 5月6日 |
-| git版本 | commit hash 前7位 | 75eef0c |
-
----
-
 ---
 
 ## V 0.31.508 — 多语言支持 + UI完善 + 功能增强
@@ -39,12 +29,6 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 - **RTSP 帧率优化**：QMediaPlayer 限帧投递避免主线程阻塞
 - **QCheckBox→QPushButton toggle**：彻底解决深色主题勾选框渲染
 
-### 技术债务
-- 移除 Settings Tab，改为语言切换 ComboBox
-- 移除 `thirdparty/FFmpeg` DLL（Qt 内置）
-- NDI `recv_get_performance` SDK 绑定
-- 所有动态 `setText` 改用 `tr()`
-
 ---
 
 ## V 0.28.507 — Slim Edition：体积优化（233MB→98MB，-58%）
@@ -57,13 +41,6 @@ V {主版本号}.{迭代次数}.{日期}_{git版本} By Asuka
 - **USB 去掉 OpenCV**：`cv2.VideoCapture` → `QCamera` + `QMediaCaptureSession` + `QVideoSink`
 - **RTSP 去掉 OpenCV**：`cv2.VideoCapture(CAP_FFMPEG)` → `QMediaPlayer` + `QVideoSink`
 - **NumPy 随 OpenCV 一起移除**
-
-### 技术债务清理
-- P0: 3 个过长函数拆分（onvif_device/rtsp_capture/visca_panel）
-- P1: ControlCard 公共组件（4 个 tab 减少 ~270 行重复代码）
-- P2: 清理未用导入 ~13 个、未用常量 ~9 个、未用 SVG 3 个
-- `theme.py` `get_global_stylesheet` 拆分为 6 个子函数
-- QCheckBox → QPushButton toggle 彻底解决深色主题勾选框渲染问题
 
 ### 修复
 - 串口异步连接（5s 超时不卡 UI）
